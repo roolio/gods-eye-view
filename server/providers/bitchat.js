@@ -8,9 +8,11 @@ import {
   CHAT_WINDOW_S,
 } from './bitchat/store.js';
 
+const sharedPool = createRelayPool();
+
 /** Same-site anonymous Bitchat routes shared by dev and preview servers. */
 export function bitchatProxy({
-  pool = createRelayPool(),
+  pool = sharedPool,
   now = () => Math.floor(Date.now() / 1000),
 } = {}) {
   const allow = makeRateLimiter({ windowMs: 60000, max: 120, globalMax: 1200 });

@@ -2851,5 +2851,14 @@
   "{count} gauging stations in view, {stale} without a reading for 6 h": {
     "other": "视野内 {count} 个水文站，其中 {stale} 个 6 小时无读数"
   },
-  "Malformed Hub'Eau response": "Hub'Eau 响应格式错误"
+  "Malformed Hub'Eau response": "Hub'Eau 响应格式错误",
+  "Bitchat activity": "Bitchat 活动",
+  "Close": "关闭",
+  "Cell {cell} · {people} people · {messages} messages": "网格 {cell} · {people} 人 · {messages} 条消息",
+  "Public messages from Bitchat location channels, shown live and not stored.": "来自 Bitchat 位置频道的公开消息，实时显示，不予存储。",
+  "No public messages available.": "暂无可用的公开消息。",
+  "{minutes} min ago": "{minutes} 分钟前",
+  "Bitchat messages unavailable": "Bitchat 消息不可用",
+  "{open}/{listed} relays · {status}": "{open}/{listed} 个中继 · {status}",
+  "At least three active keys per cell. Counts use the largest channel-level cohort. Public relay coverage is incomplete.": "每个网格至少有三个活跃密钥。人数取各频道级别中最大群体的数量。公开中继的覆盖范围不完整。"
 }

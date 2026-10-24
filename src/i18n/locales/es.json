@@ -2989,5 +2989,14 @@
     "many": "{count} de estaciones de aforo a la vista, {stale} sin lectura desde hace 6 h",
     "other": "{count} estaciones de aforo a la vista, {stale} sin lectura desde hace 6 h"
   },
-  "Malformed Hub'Eau response": "Respuesta de Hub'Eau mal formada"
+  "Malformed Hub'Eau response": "Respuesta de Hub'Eau mal formada",
+  "Bitchat activity": "Actividad de Bitchat",
+  "Close": "Cerrar",
+  "Cell {cell} · {people} people · {messages} messages": "Celda {cell} · {people} personas · {messages} mensajes",
+  "Public messages from Bitchat location channels, shown live and not stored.": "Mensajes públicos de los canales de ubicación de Bitchat, mostrados en directo y sin almacenamiento.",
+  "No public messages available.": "No hay mensajes públicos disponibles.",
+  "{minutes} min ago": "Hace {minutes} min",
+  "Bitchat messages unavailable": "Mensajes de Bitchat no disponibles",
+  "{open}/{listed} relays · {status}": "{open}/{listed} relés · {status}",
+  "At least three active keys per cell. Counts use the largest channel-level cohort. Public relay coverage is incomplete.": "Al menos tres claves activas por celda. Los recuentos usan el mayor grupo por nivel de canal. La cobertura de los relés públicos es incompleta."
 }
