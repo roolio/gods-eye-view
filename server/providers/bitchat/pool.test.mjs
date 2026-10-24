@@ -106,3 +106,38 @@ test('timeouts and failures retry with backoff without stale callbacks reenterin
   assert.equal(sockets.length, 3);
   pool.dispose();
 });
+
+test('a successful connection resets the next retry to fifteen seconds', async (t) => {
+  t.mock.timers.enable({ apis: ['setInterval'] });
+  let now = 1800000000;
+  const sockets = [];
+  const pool = createRelayPool({
+    now: () => now,
+    getRelays: async () => ['wss://relay.test'],
+    createSocket() {
+      const socket = { close() {}, send() {} };
+      sockets.push(socket);
+      return socket;
+    },
+  });
+  pool.touch();
+  await flush();
+  sockets[0].onerror();
+  now += 15;
+  t.mock.timers.tick(1000);
+  sockets[1].onerror();
+  now += 60;
+  t.mock.timers.tick(1000);
+  sockets[2].onopen();
+  assert.deepEqual(pool.snapshot().relays, { listed: 1, open: 1 });
+  sockets[2].onclose();
+  now += 14;
+  t.mock.timers.tick(1000);
+  assert.equal(sockets.length, 3);
+  now++;
+  t.mock.timers.tick(1000);
+  assert.equal(sockets.length, 4);
+  sockets[3].onopen();
+  assert.deepEqual(pool.snapshot().relays, { listed: 1, open: 1 });
+  pool.dispose();
+});

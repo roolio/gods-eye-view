@@ -125,6 +125,7 @@ export function createRelayPool({
       socket.onopen = () => {
         if (gen !== generation || relay.socket !== socket) return;
         relay.state = 'open';
+        relay.failures = 0;
         relay.lastFrame = now();
         try {
           socket.send(
