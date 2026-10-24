@@ -3689,6 +3689,7 @@ its criteria cannot be silently ignored.
 | GNSS Integrity 📡 (`gnss-integrity`) | adsb.lol point snapshot, low navigation accuracy binned per 0.5° cell (GEV NIC/NACp threshold + gpsjam.org formula and bands, keyless, ODbL) | `src/layers/gnss/` via `src/app/layers/gnss.js` | `/api/gnss-integrity` | camera-driven (600 ms debounce, minimum 2.5 s between reads) + 60s poll (server cache 60 s; 30 min rolling window) |
 | Fire Perimeters 🔥 | NIFC WFIGS current interagency perimeters (keyless, paged past the 2000-record cap); InciWeb catalog + incident page origin and update time checks for verified incident-page links | `src/layers/perimeters/` via `src/app/layers/perimeters.js` | `/api/fire-perimeters` + `/api/fire-perimeters/inciweb/*` | 5 min (server caches: catalog 1 h; publication 30 min) |
 | Île-de-France Rail Network 🚇 (`transit-network`) | Île-de-France Mobilités rail lines and stations, compiled offline into a bundle (Licence Ouverte 2.0) | `src/layers/transitNetwork/` via `src/app/layers/transitNetwork.js` | none | static |
+| Flood Vigilance (France) 🌊 (`flood-vigilance`) | Vigicrues national flood bulletin: vigilance level per river section (keyless, Licence Ouverte 2.0) | `src/layers/floodVigilance/` via `src/app/layers/floodVigilance.js` | `/api/flood-vigilance/sections` | 5 min (server cache 10 min) |
 
 GNSS Integrity samples a 250 nm circle around the Earth point under the screen
 centre. Camera reads debounce for 600 ms with a monotonic 2.5 s minimum gap;
@@ -3717,6 +3718,23 @@ primitive and keeps the parsed network, so re-enabling makes no request. Voice
 control is off for this layer (`VOICE_OFF_LAYERS`); the live Transit layer
 keeps the train, tram and subway words. Unit coverage is in
 `src/layers/transitNetwork/*.test.mjs`; there is no browser gate yet.
+
+The Flood Vigilance (France) layer (`flood-vigilance`, Weather group) answers
+whether a river is in flood and where. It draws the 337 Vigicrues river
+sections as ground polylines in the official palette: green sections are thin
+and translucent, so yellow, orange and red stand out. The proxy reads the
+national `InfoVigiCru.geojson` (about 2.2 MB) from its fixed URL, simplifies
+each line with Douglas-Peucker at 100 m and 4 decimals (about 0.5 MB), and
+caches it for 10 minutes; a failed refresh serves the last bulletin, flagged
+stale, for up to a day. The bulletin time is the collection's
+`DtHrInfoVigiCru`: per-section dates are reference-data dates. Clicking a
+section opens a card with its name, level and bulletin time; sections are not
+registered as pick owners, so they never block sibling layers' clicks. A feed
+failure keeps the layer enabled with its last bulletin and the error on the
+row. `COVERAGE` (exported from the layer module) is metropolitan France with
+Corsica. Voice control is off for this layer (`VOICE_OFF_LAYERS`). Unit
+coverage is in `src/layers/floodVigilance/*.test.mjs` and
+`server/providers/floodVigilance.test.mjs`; there is no browser gate yet.
 
 Transient source failures keep activation enabled and show unavailable/degraded
 health with the next automatic retry. Upstream 429 deadlines are capped at one

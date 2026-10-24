@@ -3019,5 +3019,20 @@
   "Green: no particular vigilance": "Зелёный: особая бдительность не требуется",
   "Yellow: localised flooding or a rapid rise": "Жёлтый: локальные разливы или быстрый подъём воды",
   "Orange: significant flooding": "Оранжевый: значительное наводнение",
-  "Red: major flood": "Красный: крупное наводнение"
+  "Red: major flood": "Красный: крупное наводнение",
+  "FLOOD VIGILANCE · {name}": "ПАВОДКОВАЯ БДИТЕЛЬНОСТЬ · {name}",
+  "Vigicrues bulletin {time} UTC": "Бюллетень Vigicrues {time} UTC",
+  "Vigicrues bulletin time unavailable": "Время бюллетеня Vigicrues неизвестно",
+  "Section {id}": "Участок {id}",
+  "Vigicrues feed unavailable": "Поток Vigicrues недоступен",
+  "Vigicrues bulletin {time} UTC. Published at 10:00 and 16:00 French time, more often during floods.": "Бюллетень Vigicrues {time} UTC. Выходит в 10:00 и 16:00 по времени Франции, во время паводков чаще.",
+  "Vigicrues publishes at 10:00 and 16:00 French time, more often during floods.": "Vigicrues публикует бюллетень в 10:00 и 16:00 по времени Франции, во время паводков чаще.",
+  "{count} river sections above green": {
+    "one": "{count} участок реки выше зелёного уровня",
+    "few": "{count} участка реки выше зелёного уровня",
+    "many": "{count} участков реки выше зелёного уровня",
+    "other": "{count} участка реки выше зелёного уровня"
+  },
+  "Malformed Vigicrues response": "Некорректный ответ Vigicrues",
+  "Flood Vigilance (France)": "Паводковая бдительность (Франция)"
 }

@@ -2818,5 +2818,17 @@
   "Green: no particular vigilance": "绿色：无需特别警戒",
   "Yellow: localised flooding or a rapid rise": "黄色：局部漫溢或水位快速上涨",
   "Orange: significant flooding": "橙色：大范围漫溢",
-  "Red: major flood": "红色：特大洪水"
+  "Red: major flood": "红色：特大洪水",
+  "FLOOD VIGILANCE · {name}": "洪水警戒 · {name}",
+  "Vigicrues bulletin {time} UTC": "Vigicrues 公报 {time} UTC",
+  "Vigicrues bulletin time unavailable": "Vigicrues 公报时间不可用",
+  "Section {id}": "河段 {id}",
+  "Vigicrues feed unavailable": "Vigicrues 数据源不可用",
+  "Vigicrues bulletin {time} UTC. Published at 10:00 and 16:00 French time, more often during floods.": "Vigicrues 公报 {time} UTC。于法国时间 10:00 和 16:00 发布，汛期更频繁。",
+  "Vigicrues publishes at 10:00 and 16:00 French time, more often during floods.": "Vigicrues 于法国时间 10:00 和 16:00 发布，汛期更频繁。",
+  "{count} river sections above green": {
+    "other": "{count} 个河段高于绿色级别"
+  },
+  "Malformed Vigicrues response": "Vigicrues 响应格式错误",
+  "Flood Vigilance (France)": "洪水警戒（法国）"
 }

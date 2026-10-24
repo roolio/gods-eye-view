@@ -512,6 +512,13 @@ export const DATA_CREDITS = [
       'data updated 2026-10-21 · ' +
       '<a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/" target="_blank" rel="noopener">Licence Ouverte 2.0</a>',
   },
+  {
+    key: 'vigicrues',
+    html:
+      'Flood vigilance (France): ' +
+      '<a href="https://www.vigicrues.gouv.fr" target="_blank" rel="noopener">Vigicrues</a> (SCHAPI) · ' +
+      '<a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/" target="_blank" rel="noopener">Licence Ouverte 2.0</a>',
+  },
 ];
 
 /**

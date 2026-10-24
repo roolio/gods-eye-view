@@ -85,6 +85,7 @@ const PANEL_GROUPS = [
       'weather-satellite',
       'weather-lightning',
       'weather-cyclones',
+      'flood-vigilance',
     ],
   },
   {
