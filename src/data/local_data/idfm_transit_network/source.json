@@ -1,0 +1,95 @@
+{
+  "captured_at": "2026-10-24",
+  "compiler": {
+    "decimals": 5,
+    "idfBounds": {
+      "east": 3.5,
+      "north": 49.4,
+      "south": 47.9,
+      "west": 1.3
+    },
+    "maxCasingLevel": 3,
+    "metresPerDegreeLat": 111200,
+    "metresPerDegreeLon": 73120,
+    "minRunLengthM": 60,
+    "sharedTrackDistanceM": 12,
+    "sharedTrackMinAbsDot": 0.98,
+    "sharedTrackSampleM": 20,
+    "simplifyToleranceM": 2,
+    "stationSplitDistanceM": 700
+  },
+  "counts": {
+    "lines": 46,
+    "maxLevel": 3,
+    "paths": 1334,
+    "stations": 961,
+    "strands": 81,
+    "vertices": 12977
+  },
+  "files": [
+    {
+      "bytes": 434887,
+      "path": "network.geojson",
+      "sha256": "8ffc8adb3765395b9f91f04da126f3168d3bee87a21e000683d626b875bc7f4c"
+    }
+  ],
+  "id": "idfm-transit-network",
+  "inputs": [
+    {
+      "dataset": "traces-du-reseau-ferre-idf",
+      "features": 1676,
+      "sha256": "11546dbdfd3a0a8567699c8ec2322fdebadaf2842ea85e1f275aa88f3af3933d",
+      "url": "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/traces-du-reseau-ferre-idf/exports/geojson"
+    },
+    {
+      "dataset": "emplacement-des-gares-idf",
+      "features": 1287,
+      "sha256": "f99ef83036d98bd886d54cbc87c7e25d698ce03330acc8772c23c8f8d273e16b",
+      "url": "https://data.iledefrance-mobilites.fr/api/explore/v2.1/catalog/datasets/emplacement-des-gares-idf/exports/geojson"
+    }
+  ],
+  "license": {
+    "name": "Licence Ouverte 2.0",
+    "url": "https://www.etalab.gouv.fr/licence-ouverte-open-licence/"
+  },
+  "name": "Île-de-France rail network",
+  "publisher": "Île-de-France Mobilités",
+  "report": {
+    "degenerateComponents": 0,
+    "droppedStationRowsByResCom": {
+      "CABLE 1": 5,
+      "FUNICULAIRE MONTMARTRE": 2,
+      "METRO 18": 4,
+      "TER BOURGOGNE-FC": 18,
+      "TER CENTRE-VDL": 24,
+      "TER GRAND-EST": 4,
+      "TER HAUTS-DE-FRANCE": 12,
+      "TER NORMANDIE": 13,
+      "TRAM 14": 5
+    },
+    "droppedTraceRowsByResCom": {
+      "CABLE 1": 4,
+      "FUNICULAIRE MONTMART": 1,
+      "METRO 18": 3,
+      "TER": 92,
+      "TER BOURGOGNE-FC": 52,
+      "TER CENTRE-VDL": 82,
+      "TER GRAND-EST": 55,
+      "TER HAUTS-DE-FRANCE": 48,
+      "TER NORMANDIE": 78,
+      "TRAM 14": 4
+    },
+    "repairsApplied": [
+      "objectid_1 550: idrefligc C0173 -> C01739"
+    ],
+    "repairsUnused": [],
+    "splitStationGroups": [
+      "1031 -> 1031-1 (Les Courtilles), 1031-2 (Timbaud)"
+    ]
+  },
+  "retained": {
+    "rawVertices": 37532,
+    "stationRows": 1200,
+    "traceRows": 1257
+  }
+}
