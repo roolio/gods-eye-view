@@ -412,6 +412,8 @@ export const VOICE_OFF_LAYERS = Object.freeze({
   'bhote-koshi-locator': 'scene-driven event layer (control_scene)',
   'transit-network':
     'static regional reference network; panel and share-link control only in V1',
+  'flood-vigilance':
+    'regional flood bulletin; panel and share-link control only in V1',
 });
 
 const TYPE_NAMES = Object.freeze({

@@ -2814,5 +2814,42 @@
   "Search": "搜索",
   "More": "更多",
   "Panels": "面板",
-  "Île-de-France Rail Network": "法兰西岛轨道交通网"
+  "Île-de-France Rail Network": "法兰西岛轨道交通网",
+  "Green: no particular vigilance": "绿色：无需特别警戒",
+  "Yellow: localised flooding or a rapid rise": "黄色：局部漫溢或水位快速上涨",
+  "Orange: significant flooding": "橙色：大范围漫溢",
+  "Red: major flood": "红色：特大洪水",
+  "FLOOD VIGILANCE · {name}": "洪水警戒 · {name}",
+  "Vigicrues bulletin {time} UTC": "Vigicrues 公报 {time} UTC",
+  "Vigicrues bulletin time unavailable": "Vigicrues 公报时间不可用",
+  "Section {id}": "河段 {id}",
+  "Vigicrues feed unavailable": "Vigicrues 数据源不可用",
+  "Vigicrues bulletin {time} UTC. Published at 10:00 and 16:00 French time, more often during floods.": "Vigicrues 公报 {time} UTC。于法国时间 10:00 和 16:00 发布，汛期更频繁。",
+  "Vigicrues publishes at 10:00 and 16:00 French time, more often during floods.": "Vigicrues 于法国时间 10:00 和 16:00 发布，汛期更频繁。",
+  "{count} river sections above green": {
+    "other": "{count} 个河段高于绿色级别"
+  },
+  "Malformed Vigicrues response": "Vigicrues 响应格式错误",
+  "Flood Vigilance (France)": "洪水警戒（法国）",
+  "no reading an hour earlier to compare": "缺少一小时前的读数，无法比较",
+  "rising {delta} m in {minutes} min": "{minutes} 分钟内上涨 {delta} 米",
+  "falling {delta} m in {minutes} min": "{minutes} 分钟内下降 {delta} 米",
+  "steady over {minutes} min": "{minutes} 分钟内保持稳定",
+  "Method: {method} · Qualification: {qualification}": "方法：{method} · 质量评定：{qualification}",
+  "Method: {method}": "方法：{method}",
+  "Qualification: {qualification}": "质量评定：{qualification}",
+  "Height {value} m": "水位 {value} 米",
+  "Flow {value} m³/s": "流量 {value} 立方米/秒",
+  "Measured {time} UTC ({age})": "测量于 {time} UTC（{age}）",
+  "No reading in the last {hours} hours": "过去 {hours} 小时内无读数",
+  "Hub'Eau station {id}": "Hub'Eau 站点 {id}",
+  "GAUGE · {name}": "水文站 · {name}",
+  "Hub'Eau feed unavailable": "Hub'Eau 数据源不可用",
+  "Zoom below {km} km to see gauging stations": "缩放至 {km} 公里以下以查看水文站",
+  "Gauging stations: {error}": "水文站：{error}",
+  "Loading gauging stations…": "正在加载水文站…",
+  "{count} gauging stations in view, {stale} without a reading for 6 h": {
+    "other": "视野内 {count} 个水文站，其中 {stale} 个 6 小时无读数"
+  },
+  "Malformed Hub'Eau response": "Hub'Eau 响应格式错误"
 }

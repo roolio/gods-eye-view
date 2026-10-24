@@ -3689,6 +3689,7 @@ its criteria cannot be silently ignored.
 | GNSS Integrity 📡 (`gnss-integrity`) | adsb.lol point snapshot, low navigation accuracy binned per 0.5° cell (GEV NIC/NACp threshold + gpsjam.org formula and bands, keyless, ODbL) | `src/layers/gnss/` via `src/app/layers/gnss.js` | `/api/gnss-integrity` | camera-driven (600 ms debounce, minimum 2.5 s between reads) + 60s poll (server cache 60 s; 30 min rolling window) |
 | Fire Perimeters 🔥 | NIFC WFIGS current interagency perimeters (keyless, paged past the 2000-record cap); InciWeb catalog + incident page origin and update time checks for verified incident-page links | `src/layers/perimeters/` via `src/app/layers/perimeters.js` | `/api/fire-perimeters` + `/api/fire-perimeters/inciweb/*` | 5 min (server caches: catalog 1 h; publication 30 min) |
 | Île-de-France Rail Network 🚇 (`transit-network`) | Île-de-France Mobilités rail lines and stations, compiled offline into a bundle (Licence Ouverte 2.0) | `src/layers/transitNetwork/` via `src/app/layers/transitNetwork.js` | none | static |
+| Flood Vigilance (France) 🌊 (`flood-vigilance`) | Vigicrues national flood bulletin: vigilance level per river section; Hub'Eau Hydrométrie gauging stations of the view (keyless, Licence Ouverte 2.0) | `src/layers/floodVigilance/` via `src/app/layers/floodVigilance.js` | `/api/flood-vigilance/sections` + `/api/flood-vigilance/stations` | 5 min (server caches: bulletin 10 min; stations 24 h; observations 5 min) + camera-driven stations (700 ms debounce) |
 
 GNSS Integrity samples a 250 nm circle around the Earth point under the screen
 centre. Camera reads debounce for 600 ms with a monotonic 2.5 s minimum gap;
@@ -3717,6 +3718,42 @@ primitive and keeps the parsed network, so re-enabling makes no request. Voice
 control is off for this layer (`VOICE_OFF_LAYERS`); the live Transit layer
 keeps the train, tram and subway words. Unit coverage is in
 `src/layers/transitNetwork/*.test.mjs`; there is no browser gate yet.
+
+The Flood Vigilance (France) layer (`flood-vigilance`, Weather group) answers
+whether a river is in flood and where. It draws the 337 Vigicrues river
+sections as ground polylines in the official palette: green sections are thin
+and translucent, so yellow, orange and red stand out. The proxy reads the
+national `InfoVigiCru.geojson` (about 2.2 MB) from its fixed URL, simplifies
+each line with Douglas-Peucker at 100 m and 4 decimals (about 0.5 MB), and
+caches it for 10 minutes; a failed refresh serves the last bulletin, flagged
+stale, for up to a day. The bulletin time is the collection's
+`DtHrInfoVigiCru`: per-section dates are reference-data dates. Clicking a
+section opens a card with its name, level and bulletin time; sections are not
+registered as pick owners, so they never block sibling layers' clicks. A feed
+failure keeps the layer enabled with its last bulletin and the error on the
+row.
+
+Below a camera height of 150 km the layer also shows the Hub'Eau gauging
+stations of the visible area, capped at 3° by 2° around the view centre and
+requested 700 ms after the camera settles. `/api/flood-vigilance/stations`
+snaps that box to whole-degree tiles, clipped to `COVERAGE` (metropolitan
+France with Corsica, exported from the layer module), and refuses more than 12.
+Per tile it reads the in-service station catalog (cached 24 h) and six hours
+of H and Q from `observations_tr` (cached 5 min, cursor-paged up to three
+20,000-row pages, rebuilt on the fixed origin). Hub'Eau does the spatial
+filtering; `observations_tr` must get `date_debut_obs`, or it does not answer.
+H arrives in millimetres and Q in litres per second; the proxy keeps the
+newest of each in metres and cubic metres per second, with method and
+qualification as sent. The trend compares the newest height with the reading
+closest to an hour earlier (45 to 90 minutes), steady within 20 mm. A station
+with no reading for six hours is a grey dot; fresh ones are blue with a height
+label (at most 32, below 60 km, rising first). Station dots are registered pick
+owners; a click opens a card with height, trend, flow when measured, the
+measurement time and its qualification. A Hub'Eau failure shows on the row and
+never fails the bulletin refresh. Voice control is off for this layer
+(`VOICE_OFF_LAYERS`). Unit
+coverage is in `src/layers/floodVigilance/*.test.mjs` and
+`server/providers/floodVigilance.test.mjs`; there is no browser gate yet.
 
 Transient source failures keep activation enabled and show unavailable/degraded
 health with the next automatic retry. Upstream 429 deadlines are capped at one
