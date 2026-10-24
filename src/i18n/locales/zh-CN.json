@@ -2814,5 +2814,9 @@
   "Search": "搜索",
   "More": "更多",
   "Panels": "面板",
-  "Île-de-France Rail Network": "法兰西岛轨道交通网"
+  "Île-de-France Rail Network": "法兰西岛轨道交通网",
+  "Green: no particular vigilance": "绿色：无需特别警戒",
+  "Yellow: localised flooding or a rapid rise": "黄色：局部漫溢或水位快速上涨",
+  "Orange: significant flooding": "橙色：大范围漫溢",
+  "Red: major flood": "红色：特大洪水"
 }

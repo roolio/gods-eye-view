@@ -1097,5 +1097,7 @@
   "src/layers/transitNetwork/labels.test.mjs",
   "src/layers/transitNetwork/scene.test.mjs",
   "src/layers/transitNetwork/index.test.mjs",
-  "src/layers/transitNetwork/testFixtures.mjs"
+  "src/layers/transitNetwork/testFixtures.mjs",
+  "src/layers/floodVigilance/records.test.mjs",
+  "server/providers/floodVigilance.test.mjs"
 ]

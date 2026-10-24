@@ -2948,5 +2948,9 @@
   "Search": "Buscar",
   "More": "Más",
   "Panels": "Paneles",
-  "Île-de-France Rail Network": "Red ferroviaria de Île-de-France"
+  "Île-de-France Rail Network": "Red ferroviaria de Île-de-France",
+  "Green: no particular vigilance": "Verde: sin vigilancia especial",
+  "Yellow: localised flooding or a rapid rise": "Amarillo: desbordamientos localizados o subida rápida",
+  "Orange: significant flooding": "Naranja: desbordamientos importantes",
+  "Red: major flood": "Rojo: crecida mayor"
 }

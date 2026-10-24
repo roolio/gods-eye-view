@@ -3015,5 +3015,9 @@
   "Search": "Поиск",
   "More": "Ещё",
   "Panels": "Панели",
-  "Île-de-France Rail Network": "Железнодорожная сеть Иль-де-Франс"
+  "Île-de-France Rail Network": "Железнодорожная сеть Иль-де-Франс",
+  "Green: no particular vigilance": "Зелёный: особая бдительность не требуется",
+  "Yellow: localised flooding or a rapid rise": "Жёлтый: локальные разливы или быстрый подъём воды",
+  "Orange: significant flooding": "Оранжевый: значительное наводнение",
+  "Red: major flood": "Красный: крупное наводнение"
 }
