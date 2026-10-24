@@ -3688,6 +3688,7 @@ its criteria cannot be silently ignored.
 | Wind 🌬                 | NOAA GFS 10 m wind (keyless, 0.25°→1° grid; animated particles)                                                                                                                                 | `src/data/wind.js`                                    | `/api/wind`                                              | 1 h (forecast cycle)                                                              |
 | GNSS Integrity 📡 (`gnss-integrity`) | adsb.lol point snapshot, low navigation accuracy binned per 0.5° cell (GEV NIC/NACp threshold + gpsjam.org formula and bands, keyless, ODbL) | `src/layers/gnss/` via `src/app/layers/gnss.js` | `/api/gnss-integrity` | camera-driven (600 ms debounce, minimum 2.5 s between reads) + 60s poll (server cache 60 s; 30 min rolling window) |
 | Fire Perimeters 🔥 | NIFC WFIGS current interagency perimeters (keyless, paged past the 2000-record cap); InciWeb catalog + incident page origin and update time checks for verified incident-page links | `src/layers/perimeters/` via `src/app/layers/perimeters.js` | `/api/fire-perimeters` + `/api/fire-perimeters/inciweb/*` | 5 min (server caches: catalog 1 h; publication 30 min) |
+| Île-de-France Rail Network 🚇 (`transit-network`) | Île-de-France Mobilités rail lines and stations, compiled offline into a bundle (Licence Ouverte 2.0) | `src/layers/transitNetwork/` via `src/app/layers/transitNetwork.js` | none | static |
 
 GNSS Integrity samples a 250 nm circle around the Earth point under the screen
 centre. Camera reads debounce for 600 ms with a monotonic 2.5 s minimum gap;
@@ -3696,6 +3697,26 @@ Counts and bands cover visited views over 30 minutes, including regions now off
 screen. Non-pickable ground primitives preserve Street Level and perimeter
 selection. The legend describes a low-accuracy score, not the raw aircraft share;
 `getStats().levels` exposes nominal, medium and high counts separately.
+
+The Île-de-France Rail Network layer (`transit-network`, Movement group) draws
+the 46 commercial rail lines (16 metro, 5 RER, 9 Transilien, 14 tram, Orlyval
+and CDGVAL) in their official colours, plus one dot per station (961). It reads
+one bundled file, `src/data/local_data/idfm_transit_network/network.geojson`;
+there is no runtime request to IDFM. `scripts/build-transit-network.mjs`
+compiles that file offline from the two IDFM exports, and `--check` verifies it
+reproduces. Where a line runs within 12 m of a better-ranked line, it is drawn
+wider underneath it, so a shared trunk such as RER B and D between Châtelet and
+Gare du Nord shows both colours. Lines are ground polylines classified on
+terrain for globe stacks and on 3D tiles for photoreal, switched in place on a
+stack change. On photoreal a station dot stays hidden until `sampleHeight`
+returns a surface height, then sits 2 m above it; at most 24 samples run per
+sweep. Station names go through the world-overlay host in the shared
+ambient-label domain: at most 24 painted names and none at camera heights of
+12 km or more, fading from 8 km and beyond 25 km. Disabling frees every
+primitive and keeps the parsed network, so re-enabling makes no request. Voice
+control is off for this layer (`VOICE_OFF_LAYERS`); the live Transit layer
+keeps the train, tram and subway words. Unit coverage is in
+`src/layers/transitNetwork/*.test.mjs`; there is no browser gate yet.
 
 Transient source failures keep activation enabled and show unavailable/degraded
 health with the next automatic retry. Upstream 429 deadlines are capped at one

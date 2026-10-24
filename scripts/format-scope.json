@@ -1088,5 +1088,14 @@
   "scripts/qa-status-badges.mjs",
   "src/dockerTrustedPeers.test.mjs",
   "src/cameraGlobeRotation.test.mjs",
-  "src/voice/globeResetConfirmation.test.mjs"
+  "src/voice/globeResetConfirmation.test.mjs",
+  "scripts/build-transit-network.mjs",
+  "src/layers/transitNetwork/compile.test.mjs",
+  "src/layers/transitNetwork/bundle.test.mjs",
+  "src/layers/transitNetwork/source.test.mjs",
+  "src/layers/transitNetwork/style.test.mjs",
+  "src/layers/transitNetwork/labels.test.mjs",
+  "src/layers/transitNetwork/scene.test.mjs",
+  "src/layers/transitNetwork/index.test.mjs",
+  "src/layers/transitNetwork/testFixtures.mjs"
 ]

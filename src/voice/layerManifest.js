@@ -410,6 +410,8 @@ const layers = [
 export const VOICE_OFF_LAYERS = Object.freeze({
   'bhote-koshi-2026': 'scene-driven event layer (control_scene)',
   'bhote-koshi-locator': 'scene-driven event layer (control_scene)',
+  'transit-network':
+    'static regional reference network; panel and share-link control only in V1',
 });
 
 const TYPE_NAMES = Object.freeze({
