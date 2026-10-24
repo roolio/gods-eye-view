@@ -504,6 +504,14 @@ export const DATA_CREDITS = [
       '<a href="https://www.submarinecablemap.com" target="_blank" rel="noopener">submarinecablemap.com</a> ' +
       '(CC BY-NC-SA 3.0 — NonCommercial)',
   },
+  {
+    key: 'idfm-transit-network',
+    html:
+      'Rail network (Île-de-France): ' +
+      '<a href="https://data.iledefrance-mobilites.fr/explore/dataset/traces-du-reseau-ferre-idf/" target="_blank" rel="noopener">Île-de-France Mobilités</a>, ' +
+      'data updated 2026-10-21 · ' +
+      '<a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/" target="_blank" rel="noopener">Licence Ouverte 2.0</a>',
+  },
 ];
 
 /**

@@ -29,6 +29,7 @@ import { createApplicationFirePerimeters } from './layers/perimeters.js';
 import { createApplicationGnssIntegrity } from './layers/gnss.js';
 import { createApplicationCables } from './layers/submarineCables.js';
 import { createApplicationStreetLevel } from './layers/streetLevel.js';
+import { createApplicationTransitNetwork } from './layers/transitNetwork.js';
 import { createInfrastructureLayers } from '../data/infrastructure.js';
 import { localGeoJsonServices } from './localGeojsonServices.js';
 import { createBhoteKoshiEventLayer } from '../data/bhoteKoshiEvent.js';
@@ -175,6 +176,9 @@ export function createApplicationCatalog({
           icon: '▲',
           source: 'NASA FIRMS · LIVE',
           feed: sources.firms,
+        }),
+        createApplicationTransitNetwork({
+          source: sources['transit-network'],
         }),
       ],
       metadata,
