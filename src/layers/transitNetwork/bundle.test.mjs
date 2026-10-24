@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
+import { createBundledTransitNetworkSource } from './source.js';
 
 const BUNDLE_DIR = new URL(
   '../../data/local_data/idfm_transit_network/',
@@ -12,56 +13,52 @@ const networkBytes = readFileSync(new URL('network.geojson', BUNDLE_DIR));
 const sourceMeta = JSON.parse(
   readFileSync(new URL('source.json', BUNDLE_DIR), 'utf8'),
 );
-const features = JSON.parse(networkBytes.toString('utf8')).features;
-const lineFeatures = features.filter(
-  (feature) => feature.properties.kind === 'line',
-);
-const stations = features.filter(
-  (feature) => feature.properties.kind === 'station',
-);
-
-function lineById() {
-  const lines = new Map();
-  for (const { properties } of lineFeatures)
-    lines.set(properties.line, properties);
-  return lines;
-}
+const network = await createBundledTransitNetworkSource({
+  fetchImpl: async () => ({
+    ok: true,
+    json: async () => JSON.parse(networkBytes.toString('utf8')),
+  }),
+}).fetch();
+const lineById = new Map(network.lines.map((line) => [line.id, line]));
 
 test('the bundle holds the 46 commercial lines in official colours', () => {
-  const lines = lineById();
-  assert.equal(lines.size, 46);
-  assert.equal(lines.get('C01371').color, '#FFBE00');
-  assert.equal(lines.get('C01743').color, '#5091CB');
-  assert.equal(lines.get('C01739').color, '#CEC73D');
+  assert.equal(network.lines.length, 46);
+  assert.equal(lineById.get('C01371').color, '#FFBE00');
+  assert.equal(lineById.get('C01743').color, '#5091CB');
+  assert.equal(lineById.get('C01739').color, '#CEC73D');
 });
 
 test('Châtelet is one station serving metro 1, 4, 7, 11 and 14', () => {
-  const lines = lineById();
-  const chatelet = stations.filter(
-    (station) => station.properties.name === 'Châtelet',
+  const chatelet = network.stations.filter(
+    (station) => station.name === 'Châtelet',
   );
   assert.equal(chatelet.length, 1);
   assert.deepEqual(
-    chatelet[0].properties.lineIds.map((id) => lines.get(id).code),
+    chatelet[0].lines.map((line) => line.code),
     ['1', '4', '7', '11', '14'],
   );
-  assert.deepEqual(chatelet[0].geometry.coordinates, [2.34648, 48.85959]);
+  assert.deepEqual([chatelet[0].lon, chatelet[0].lat], [2.34648, 48.85959]);
 });
 
-test('961 stations, none referring to a line outside the bundle', () => {
-  const lines = lineById();
-  assert.equal(stations.length, 961);
-  const dangling = stations.flatMap((station) =>
-    station.properties.lineIds.filter((id) => !lines.has(id)),
+test('961 stations, each serving lines from the bundle', () => {
+  assert.equal(network.stations.length, 961);
+  const foreign = network.stations.flatMap((station) =>
+    station.lines.filter((line) => lineById.get(line.id) !== line),
   );
-  assert.deepEqual(dangling, []);
+  assert.deepEqual(foreign, []);
 });
 
 test('RER D is cased under RER B on the shared trunk', () => {
-  const levels = lineFeatures
-    .filter((feature) => feature.properties.line === 'C01728')
-    .map((feature) => feature.properties.level);
-  assert.deepEqual(levels, [0, 1, 2]);
+  const levelsOf = (id) =>
+    network.strandsByLevel.flatMap((strands, level) =>
+      strands.some((strand) => strand.line.id === id) ? [level] : [],
+    );
+  assert.deepEqual(levelsOf('C01728'), [0, 1, 2]);
+  assert.deepEqual(levelsOf('C01743'), [0, 1]);
+  assert.deepEqual(
+    network.strandsByLevel.map((strands) => strands.length),
+    [46, 25, 8, 2],
+  );
 });
 
 test('the bundle stays small and matches its provenance record', () => {
@@ -70,7 +67,6 @@ test('the bundle stays small and matches its provenance record', () => {
   assert.deepEqual(sourceMeta.files, [
     { path: 'network.geojson', bytes: networkBytes.length, sha256 },
   ]);
-  assert.equal(sourceMeta.counts.stations, stations.length);
-  assert.equal(sourceMeta.counts.strands, lineFeatures.length);
+  assert.equal(sourceMeta.counts.stations, network.stations.length);
   assert.equal(sourceMeta.license.name, 'Licence Ouverte 2.0');
 });
