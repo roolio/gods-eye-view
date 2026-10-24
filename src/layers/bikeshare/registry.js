@@ -712,6 +712,70 @@ const RAW_GBFS_CITY_REGISTRY = [
       'https://rivas.publicbikesystem.net/customer/gbfs/v2/en/station_status.json',
     provider: 'BicinRivas',
   },
+  // French systems. A 25 km radius reaches every live station (the farthest is
+  // Vélib's, 15.2 km out) and keeps out what the feeds list away from the
+  // city: Vélo'v and Naolib stations at (0,0), and vélôToulouse's workshop
+  // terminal 35.6 km west of the centre (checked 2026-10-24).
+  {
+    id: 'lyon-velov',
+    city: 'Lyon, France',
+    centerLat: 45.7596,
+    centerLon: 4.8505,
+    loadRadiusKm: 25,
+    stationInformationUrl:
+      'https://api.cyclocity.fr/contracts/lyon/gbfs/station_information.json',
+    stationStatusUrl:
+      'https://api.cyclocity.fr/contracts/lyon/gbfs/station_status.json',
+    provider: "Vélo'v",
+  },
+  {
+    id: 'nantes-naolib',
+    city: 'Nantes, France',
+    centerLat: 47.2143,
+    centerLon: -1.5553,
+    loadRadiusKm: 25,
+    stationInformationUrl:
+      'https://api.cyclocity.fr/contracts/nantes/gbfs/station_information.json',
+    stationStatusUrl:
+      'https://api.cyclocity.fr/contracts/nantes/gbfs/station_status.json',
+    provider: 'Naolib',
+  },
+  {
+    id: 'toulouse-velotoulouse',
+    city: 'Toulouse, France',
+    centerLat: 43.6019,
+    centerLon: 1.4413,
+    loadRadiusKm: 25,
+    stationInformationUrl:
+      'https://api.cyclocity.fr/contracts/toulouse/gbfs/station_information.json',
+    stationStatusUrl:
+      'https://api.cyclocity.fr/contracts/toulouse/gbfs/station_status.json',
+    provider: 'vélôToulouse',
+  },
+  {
+    id: 'nancy-velostanlib',
+    city: 'Nancy, France',
+    centerLat: 48.6896,
+    centerLon: 6.1785,
+    loadRadiusKm: 25,
+    stationInformationUrl:
+      'https://api.cyclocity.fr/contracts/nancy/gbfs/station_information.json',
+    stationStatusUrl:
+      'https://api.cyclocity.fr/contracts/nancy/gbfs/station_status.json',
+    provider: "vélOstan'lib",
+  },
+  {
+    id: 'paris-velib',
+    city: 'Paris, France',
+    centerLat: 48.8581,
+    centerLon: 2.344,
+    loadRadiusKm: 25,
+    stationInformationUrl:
+      'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_information.json',
+    stationStatusUrl:
+      'https://velib-metropole-opendata.smovengo.cloud/opendata/Velib_Metropole/station_status.json',
+    provider: "Vélib' Métropole",
+  },
 ];
 function normalizeRegistryEntry(entry) {
   const id = String(entry?.id || '')
