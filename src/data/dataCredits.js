@@ -370,8 +370,15 @@ export const DATA_CREDITS = [
   {
     key: 'jcdecaux-gbfs',
     html:
-      'City bikes (Lillestrøm, Valencia, Seville): Bysykkel Lillestrøm, Valenbisi, Sevici, JCDecaux — ' +
+      'City bikes (Lillestrøm, Valencia, Seville, Lyon, Nantes, Toulouse, Nancy): Bysykkel Lillestrøm, Valenbisi, Sevici, ' +
+      "Vélo'v, Naolib, vélôToulouse, vélOstan'lib, JCDecaux · " +
       '<a href="https://developer.jcdecaux.com/files/Open-Licence-fr.pdf" target="_blank" rel="noopener">Licence Ouverte</a>',
+  },
+  {
+    key: 'velib-gbfs',
+    html:
+      "City bikes (Paris): Vélib' Métropole, © Smovengo / Syndicat Autolib' Vélib' Métropole · " +
+      '<a href="https://opendatacommons.org/licenses/odbl/1-0/" target="_blank" rel="noopener">ODbL</a>',
   },
   {
     key: 'osrm-routing',

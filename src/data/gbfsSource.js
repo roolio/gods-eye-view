@@ -12,16 +12,18 @@ const GBFS_ALLOWED_HOSTS = new Set([
   'gbfs.urbansharing.com',
   'api.entur.io',
   'api.cyclocity.fr',
+  'velib-metropole-opendata.smovengo.cloud',
 ]);
 
 /**
  * Hosts that serve more than GBFS keep the proxy to their GBFS tree: Entur's
- * api.entur.io fronts every Entur API, and api.cyclocity.fr every JCDecaux
- * contract endpoint.
+ * api.entur.io fronts every Entur API, api.cyclocity.fr every JCDecaux
+ * contract endpoint, and Smovengo's open-data host is held to Vélib's feeds.
  */
 const GBFS_HOST_PATH_PREFIXES = new Map([
   ['api.entur.io', '/mobility/v2/gbfs/'],
   ['api.cyclocity.fr', '/contracts/'],
+  ['velib-metropole-opendata.smovengo.cloud', '/opendata/Velib_Metropole/'],
 ]);
 
 /**
