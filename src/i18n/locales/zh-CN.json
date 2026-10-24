@@ -2859,5 +2859,7 @@
   "{open}/{listed} relays · {status}": "{open}/{listed} 个中继 · {status}",
   "At least three active keys per cell. Counts use the largest channel-level cohort. Public relay coverage is incomplete.": "每个网格至少有三个活跃密钥。人数取各频道级别中最大群体的数量。公开中继的覆盖范围不完整。",
   "BITCHAT · {cell}": "BITCHAT · {cell}",
-  "{people} people · {messages} messages": "{people} 人 · {messages} 条消息"
+  "{count} people": {
+    "other": "{count} 人"
+  }
 }

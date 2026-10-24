@@ -1,14 +1,15 @@
-import { formatRelativeTime, t } from '../../i18n/index.js';
+import { formatRelativeTime, t, tn } from '../../i18n/index.js';
 
 export const BITCHAT_CARD_SOURCE_ID = 'bitchat-card';
 
 /** Anonymous public text for the shared world-overlay card renderer. */
 export function buildBitchatCard(cell, data, now = Date.now()) {
   const details = [
-    t('{people} people · {messages} messages', {
-      people: data.people,
-      messages: cell.messages,
-    }),
+    `${tn(data.people, '{count} person', '{count} people')} · ${tn(
+      cell.messages,
+      '{count} message',
+      '{count} messages',
+    )}`,
   ];
   if (!data.messages.length) details.push(t('No public messages available.'));
   for (const { text, at } of data.messages.slice(0, 5)) {

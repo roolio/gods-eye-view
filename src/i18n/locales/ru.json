@@ -3066,5 +3066,10 @@
   "{open}/{listed} relays · {status}": "{open}/{listed} ретрансляторов · {status}",
   "At least three active keys per cell. Counts use the largest channel-level cohort. Public relay coverage is incomplete.": "Не менее трёх активных ключей на ячейку. Численность определяется по наибольшей группе одного уровня каналов. Охват публичных ретрансляторов неполный.",
   "BITCHAT · {cell}": "BITCHAT · {cell}",
-  "{people} people · {messages} messages": "{people} участников · {messages} сообщений"
+  "{count} people": {
+    "one": "{count} человек",
+    "few": "{count} человека",
+    "many": "{count} человек",
+    "other": "{count} человека"
+  }
 }

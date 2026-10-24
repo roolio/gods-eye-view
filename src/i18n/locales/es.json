@@ -2997,5 +2997,9 @@
   "{open}/{listed} relays · {status}": "{open}/{listed} relés · {status}",
   "At least three active keys per cell. Counts use the largest channel-level cohort. Public relay coverage is incomplete.": "Al menos tres claves activas por celda. Los recuentos usan el mayor grupo por nivel de canal. La cobertura de los relés públicos es incompleta.",
   "BITCHAT · {cell}": "BITCHAT · {cell}",
-  "{people} people · {messages} messages": "{people} personas · {messages} mensajes"
+  "{count} people": {
+    "one": "{count} persona",
+    "many": "{count} de personas",
+    "other": "{count} personas"
+  }
 }

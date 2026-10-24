@@ -223,3 +223,13 @@ test('cards cap message excerpts and keep public content as literal text', async
   assert.equal(card.details.length, 7);
   assert.equal(card.details[1], `${'x'.repeat(139)}… · 1 minute ago`);
 });
+
+test('card counts use singular forms for one person or one message', async () => {
+  const { buildBitchatCard } = await import('./cards.js');
+  const card = buildBitchatCard(
+    { ...snapshot.cells[0], messages: 1 },
+    { people: 1, messages: [] },
+    1800000060000,
+  );
+  assert.equal(card.details[0], '1 person · 1 message');
+});
