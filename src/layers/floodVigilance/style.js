@@ -18,3 +18,14 @@ const SECTION_LINE = Object.freeze({
 export function sectionLineStyle(level) {
   return { color: vigilanceLevel(level).color, ...SECTION_LINE[level] };
 }
+
+/** Gauges read as water when fresh and drop to grey past six hours. */
+const STATION_POINT = Object.freeze({
+  fresh: Object.freeze({ fill: '#38BDF8', outline: '#FFFFFF', pixelSize: 9 }),
+  stale: Object.freeze({ fill: '#8A8F98', outline: '#3A3F47', pixelSize: 7 }),
+});
+
+/** @param {boolean} stale */
+export function stationPointStyle(stale) {
+  return stale ? STATION_POINT.stale : STATION_POINT.fresh;
+}

@@ -519,6 +519,13 @@ export const DATA_CREDITS = [
       '<a href="https://www.vigicrues.gouv.fr" target="_blank" rel="noopener">Vigicrues</a> (SCHAPI) · ' +
       '<a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/" target="_blank" rel="noopener">Licence Ouverte 2.0</a>',
   },
+  {
+    key: 'hubeau-hydrometrie',
+    html:
+      'River gauges (France): ' +
+      '<a href="https://hubeau.eaufrance.fr/page/api-hydrometrie" target="_blank" rel="noopener">Hub\'Eau Hydrométrie</a> (SCHAPI, Eaufrance) · ' +
+      '<a href="https://www.etalab.gouv.fr/licence-ouverte-open-licence/" target="_blank" rel="noopener">Licence Ouverte 2.0</a>',
+  },
 ];
 
 /**

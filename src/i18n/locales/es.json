@@ -2966,5 +2966,28 @@
     "other": "{count} tramos de río por encima de verde"
   },
   "Malformed Vigicrues response": "Respuesta de Vigicrues mal formada",
-  "Flood Vigilance (France)": "Vigilancia de crecidas (Francia)"
+  "Flood Vigilance (France)": "Vigilancia de crecidas (Francia)",
+  "no reading an hour earlier to compare": "sin lectura de hace una hora para comparar",
+  "rising {delta} m in {minutes} min": "sube {delta} m en {minutes} min",
+  "falling {delta} m in {minutes} min": "baja {delta} m en {minutes} min",
+  "steady over {minutes} min": "estable en {minutes} min",
+  "Method: {method} · Qualification: {qualification}": "Método: {method} · Calificación: {qualification}",
+  "Method: {method}": "Método: {method}",
+  "Qualification: {qualification}": "Calificación: {qualification}",
+  "Height {value} m": "Altura {value} m",
+  "Flow {value} m³/s": "Caudal {value} m³/s",
+  "Measured {time} UTC ({age})": "Medido {time} UTC ({age})",
+  "No reading in the last {hours} hours": "Sin lecturas en las últimas {hours} horas",
+  "Hub'Eau station {id}": "Estación Hub'Eau {id}",
+  "GAUGE · {name}": "LIMNÍGRAFO · {name}",
+  "Hub'Eau feed unavailable": "Fuente Hub'Eau no disponible",
+  "Zoom below {km} km to see gauging stations": "Acércate por debajo de {km} km para ver las estaciones de aforo",
+  "Gauging stations: {error}": "Estaciones de aforo: {error}",
+  "Loading gauging stations…": "Cargando estaciones de aforo…",
+  "{count} gauging stations in view, {stale} without a reading for 6 h": {
+    "one": "{count} estación de aforo a la vista, {stale} sin lectura desde hace 6 h",
+    "many": "{count} de estaciones de aforo a la vista, {stale} sin lectura desde hace 6 h",
+    "other": "{count} estaciones de aforo a la vista, {stale} sin lectura desde hace 6 h"
+  },
+  "Malformed Hub'Eau response": "Respuesta de Hub'Eau mal formada"
 }

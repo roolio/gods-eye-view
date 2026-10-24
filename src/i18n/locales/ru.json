@@ -3034,5 +3034,29 @@
     "other": "{count} участка реки выше зелёного уровня"
   },
   "Malformed Vigicrues response": "Некорректный ответ Vigicrues",
-  "Flood Vigilance (France)": "Паводковая бдительность (Франция)"
+  "Flood Vigilance (France)": "Паводковая бдительность (Франция)",
+  "no reading an hour earlier to compare": "нет показания часом ранее для сравнения",
+  "rising {delta} m in {minutes} min": "подъём на {delta} м за {minutes} мин",
+  "falling {delta} m in {minutes} min": "спад на {delta} м за {minutes} мин",
+  "steady over {minutes} min": "без изменений за {minutes} мин",
+  "Method: {method} · Qualification: {qualification}": "Метод: {method} · Оценка качества: {qualification}",
+  "Method: {method}": "Метод: {method}",
+  "Qualification: {qualification}": "Оценка качества: {qualification}",
+  "Height {value} m": "Уровень {value} м",
+  "Flow {value} m³/s": "Расход {value} м³/с",
+  "Measured {time} UTC ({age})": "Измерено {time} UTC ({age})",
+  "No reading in the last {hours} hours": "Нет показаний за последние {hours} часов",
+  "Hub'Eau station {id}": "Станция Hub'Eau {id}",
+  "GAUGE · {name}": "ГИДРОПОСТ · {name}",
+  "Hub'Eau feed unavailable": "Поток Hub'Eau недоступен",
+  "Zoom below {km} km to see gauging stations": "Опуститесь ниже {km} км, чтобы увидеть гидропосты",
+  "Gauging stations: {error}": "Гидропосты: {error}",
+  "Loading gauging stations…": "Загрузка гидропостов…",
+  "{count} gauging stations in view, {stale} without a reading for 6 h": {
+    "one": "{count} гидропост в поле зрения, без показаний 6 ч: {stale}",
+    "few": "{count} гидропоста в поле зрения, без показаний 6 ч: {stale}",
+    "many": "{count} гидропостов в поле зрения, без показаний 6 ч: {stale}",
+    "other": "{count} гидропоста в поле зрения, без показаний 6 ч: {stale}"
+  },
+  "Malformed Hub'Eau response": "Некорректный ответ Hub'Eau"
 }

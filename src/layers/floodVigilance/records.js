@@ -1,7 +1,7 @@
 /**
- * Flood vigilance records: Vigicrues river sections. Pure and portable: the
- * server provider imports this module, so it loads no Cesium and no
- * translation catalogs.
+ * Flood vigilance records: Vigicrues river sections and Hub'Eau gauging
+ * stations. Pure and portable: the server provider imports this module, so it
+ * loads no Cesium and no translation catalogs.
  */
 import { msg } from '../../i18n/marker.js';
 
@@ -41,9 +41,18 @@ export const VIGILANCE_LEVELS = Object.freeze([
 
 /** Section geometry is simplified to this many metres before it is served. */
 export const SECTION_SIMPLIFY_TOLERANCE_M = 100;
+/** A station with no reading for this long is drawn as out of date. */
+export const STATION_STALE_AFTER_MS = 6 * 3600_000;
+/** The trend compares the newest height with one about an hour earlier. */
+export const TREND_SPAN_MS = 3600_000;
+const TREND_MIN_SPAN_MS = 45 * 60_000;
+const TREND_MAX_SPAN_MS = 90 * 60_000;
+/** Height changes smaller than this over the span read as steady. */
+export const TREND_STEADY_MM = 20;
 
 const COORDINATE_DECIMALS = 4;
 const METRES_PER_DEGREE = 111_320;
+const STATION_CODE = /^[A-Z0-9]{8,12}$/;
 
 /** @param {number} level */
 export function vigilanceLevel(level) {
@@ -193,4 +202,189 @@ export function normalizeVigicruesSnapshot(
         : null,
     sections: [...sections.values()].sort((a, b) => a.id.localeCompare(b.id)),
   };
+}
+
+/**
+ * @typedef {object} HydroStation
+ * @property {string} id `code_station`, e.g. 'F700000103'.
+ * @property {string} name
+ * @property {string|null} river
+ * @property {number} lon
+ * @property {number} lat
+ */
+
+/**
+ * Parse a Hub'Eau `referentiel/stations` JSON page. Stations out of service
+ * or without coordinates are dropped.
+ * @param {object} payload
+ * @returns {HydroStation[]|null} Null when the payload has no `data` array.
+ */
+export function normalizeHubeauStations(payload) {
+  if (!Array.isArray(payload?.data)) return null;
+  const stations = [];
+  for (const row of payload.data) {
+    const id = row?.code_station;
+    if (typeof id !== 'string' || !STATION_CODE.test(id)) continue;
+    if (row.en_service === false) continue;
+    const lon = row.longitude_station;
+    const lat = row.latitude_station;
+    if (!validPosition([lon, lat])) continue;
+    stations.push({
+      id,
+      name:
+        typeof row.libelle_station === 'string' && row.libelle_station.trim()
+          ? row.libelle_station.trim()
+          : id,
+      river:
+        typeof row.libelle_cours_eau === 'string' &&
+        row.libelle_cours_eau.trim()
+          ? row.libelle_cours_eau.trim()
+          : null,
+      lon,
+      lat,
+    });
+  }
+  return stations;
+}
+
+/**
+ * @typedef {object} HydroReading
+ * @property {number} value Metres for H, cubic metres per second for Q.
+ * @property {number} observedAt Epoch ms.
+ * @property {string|null} method `libelle_methode_obs`, e.g. 'Mesurée'.
+ * @property {string|null} qualification `libelle_qualification_obs`.
+ */
+
+/** Hub'Eau reports H in millimetres and Q in litres per second. */
+export function convertHubeauValue(quantity, raw) {
+  if (!Number.isFinite(raw)) return null;
+  if (quantity === 'H' || quantity === 'Q') return raw / 1000;
+  return null;
+}
+
+const label = (value) =>
+  typeof value === 'string' && value.trim() ? value.trim() : null;
+
+/**
+ * Group `observations_tr` rows by station and quantity, newest first.
+ * @param {object[]} rows
+ * @returns {Map<string, {H: HydroReading[], Q: HydroReading[]}>}
+ */
+export function groupHubeauObservations(rows) {
+  const byStation = new Map();
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const id = row?.code_station;
+    const quantity = row?.grandeur_hydro;
+    if (typeof id !== 'string' || (quantity !== 'H' && quantity !== 'Q'))
+      continue;
+    const value = convertHubeauValue(quantity, row.resultat_obs);
+    const observedAt = Date.parse(row.date_obs);
+    if (value === null || !Number.isFinite(observedAt)) continue;
+    let series = byStation.get(id);
+    if (!series) byStation.set(id, (series = { H: [], Q: [] }));
+    series[quantity].push({
+      value,
+      observedAt,
+      method: label(row.libelle_methode_obs),
+      qualification: label(row.libelle_qualification_obs),
+    });
+  }
+  for (const series of byStation.values()) {
+    series.H.sort((a, b) => b.observedAt - a.observedAt);
+    series.Q.sort((a, b) => b.observedAt - a.observedAt);
+  }
+  return byStation;
+}
+
+/**
+ * @typedef {object} HeightTrend
+ * @property {'rising'|'falling'|'steady'} direction
+ * @property {number} deltaM Newest minus the earlier height.
+ * @property {number} spanMs Time between the two readings.
+ */
+
+/**
+ * Compare the newest height with the reading closest to an hour before it.
+ * @param {HydroReading[]} heights Newest first.
+ * @returns {HeightTrend|null} Null without a reading 45 to 90 minutes earlier.
+ */
+export function heightTrend(heights) {
+  const [latest] = heights;
+  if (!latest) return null;
+  let best = null;
+  for (const reading of heights) {
+    const span = latest.observedAt - reading.observedAt;
+    if (span < TREND_MIN_SPAN_MS || span > TREND_MAX_SPAN_MS) continue;
+    if (
+      !best ||
+      Math.abs(span - TREND_SPAN_MS) <
+        Math.abs(latest.observedAt - best.observedAt - TREND_SPAN_MS)
+    )
+      best = reading;
+  }
+  if (!best) return null;
+  const deltaM = latest.value - best.value;
+  const steady = TREND_STEADY_MM / 1000;
+  return {
+    direction:
+      deltaM >= steady ? 'rising' : deltaM <= -steady ? 'falling' : 'steady',
+    deltaM: Math.round(deltaM * 1000) / 1000,
+    spanMs: latest.observedAt - best.observedAt,
+  };
+}
+
+/**
+ * @typedef {object} StationSummary
+ * @property {HydroReading|null} height Newest H.
+ * @property {HydroReading|null} flow Newest Q.
+ * @property {HeightTrend|null} trend
+ */
+
+/**
+ * Reduce `observations_tr` rows to the newest height, flow and trend per
+ * station: all the proxy needs to keep.
+ * @param {object[]} rows
+ * @returns {Map<string, StationSummary>}
+ */
+export function summarizeHubeauObservations(rows) {
+  const summaries = new Map();
+  for (const [id, series] of groupHubeauObservations(rows)) {
+    summaries.set(id, {
+      height: series.H[0] ?? null,
+      flow: series.Q[0] ?? null,
+      trend: heightTrend(series.H),
+    });
+  }
+  return summaries;
+}
+
+/** @typedef {HydroStation & StationSummary} StationReading */
+
+/**
+ * Join stations with their summaries; a station without one has no reading.
+ * @param {HydroStation[]} stations
+ * @param {Map<string, StationSummary>} summaries
+ * @returns {StationReading[]}
+ */
+export function joinStationReadings(stations, summaries) {
+  return stations.map((station) => ({
+    ...station,
+    height: summaries.get(station.id)?.height ?? null,
+    flow: summaries.get(station.id)?.flow ?? null,
+    trend: summaries.get(station.id)?.trend ?? null,
+  }));
+}
+
+/** Newest observation time of a station, or null when it has none. */
+export function stationObservedAt(station) {
+  const times = [station?.height?.observedAt, station?.flow?.observedAt].filter(
+    Number.isFinite,
+  );
+  return times.length ? Math.max(...times) : null;
+}
+
+/** True when a station has no reading in the last six hours. */
+export function stationIsStale(station, nowMs) {
+  const at = stationObservedAt(station);
+  return at === null || nowMs - at > STATION_STALE_AFTER_MS;
 }

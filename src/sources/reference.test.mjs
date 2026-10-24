@@ -35,5 +35,6 @@ test('reference factories retain compatibility without starting acquisition or s
   assert.equal(typeof first['gnss-integrity'].getSnapshot, 'function');
   assert.equal(typeof first['transit-network'].fetch, 'function');
   assert.equal(typeof first['flood-vigilance'].getSections, 'function');
+  assert.equal(typeof first['flood-vigilance'].getStations, 'function');
   assert.equal(requests, 0);
 });

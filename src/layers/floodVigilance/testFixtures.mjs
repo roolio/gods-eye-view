@@ -5,8 +5,13 @@ import * as Cesium from 'cesium';
 Cesium.ContextLimits._minimumAliasedLineWidth = 1;
 Cesium.ContextLimits._maximumAliasedLineWidth = 1;
 
-/** Minimal viewer: ground primitives, a scripted pick and a click seam. */
-export function fakeViewer({ heightM = 900_000, lon = 2.35, lat = 46.5 } = {}) {
+/** Minimal viewer: primitives, a scripted pick and a movable camera height. */
+export function fakeViewer({
+  heightM = 900_000,
+  lon = 2.35,
+  lat = 46.5,
+  viewRectangle = null,
+} = {}) {
   const renders = { count: 0 };
   const viewer = {
     picked: null,
@@ -15,6 +20,7 @@ export function fakeViewer({ heightM = 900_000, lon = 2.35, lat = 46.5 } = {}) {
       groundPrimitives: new Cesium.PrimitiveCollection(),
       primitives: new Cesium.PrimitiveCollection(),
       globe: { show: true, ellipsoid: Cesium.Ellipsoid.WGS84 },
+      canvas: { clientWidth: 1200, clientHeight: 800 },
       pick: () => viewer.picked,
       requestRender() {
         renders.count++;
@@ -23,7 +29,9 @@ export function fakeViewer({ heightM = 900_000, lon = 2.35, lat = 46.5 } = {}) {
     camera: {
       positionCartographic: Cesium.Cartographic.fromDegrees(lon, lat, heightM),
       moveEnd: new Cesium.Event(),
-      pickEllipsoid: () => Cesium.Cartesian3.fromDegrees(1.6, 50.7),
+      pickEllipsoid: () => Cesium.Cartesian3.fromDegrees(lon, lat),
+      computeViewRectangle: () =>
+        viewRectangle && Cesium.Rectangle.fromDegrees(...viewRectangle),
     },
   };
   return viewer;
@@ -67,7 +75,13 @@ export function clickSeam() {
   return seam;
 }
 
-export const picking = {
-  resolvePickId: (picked) => picked?.id ?? null,
-  isOwnedByOtherLayer: (layerId, id) => id.startsWith('other:'),
-};
+export function fakePicking() {
+  const owners = new Map();
+  return {
+    owners,
+    resolvePickId: (picked) => picked?.id ?? null,
+    isOwnedByOtherLayer: (layerId, id) => id.startsWith('other:'),
+    registerPickOwner: (layerId, predicate) => owners.set(layerId, predicate),
+    unregisterPickOwner: (layerId) => owners.delete(layerId),
+  };
+}
