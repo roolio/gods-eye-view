@@ -18,6 +18,12 @@ try {
   await page.bringToFront();
   await page.setViewport({ width: 1440, height: 900 });
   await page.evaluateOnNewDocument(() => {
+    window.__bitchatDrawnText = new Set();
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text, ...args) {
+      window.__bitchatDrawnText.add(String(text));
+      return fillText.call(this, text, ...args);
+    };
     const original = window.fetch.bind(window);
     window.fetch = async (input, options) => {
       const url = String(input?.url || input);
@@ -25,7 +31,7 @@ try {
       const at = Math.floor(Date.now() / 1000);
       const value = url.includes('/messages')
         ? {
-            cell: 'u09',
+            cell: 'u09t',
             people: 12,
             messages: [
               {
@@ -36,10 +42,10 @@ try {
           }
         : {
             status: 'live',
-            precision: 3,
+            precision: 4,
             generatedAt: at,
             relays: { listed: 377, open: 300 },
-            cells: [{ geohash: 'u09', people: 12, messages: 1, lastAt: at }],
+            cells: [{ geohash: 'u09t', people: 12, messages: 1, lastAt: at }],
             coarse: [{ geohash: 'u0', people: 20 }],
           };
       return new Response(JSON.stringify(value), {
@@ -61,9 +67,9 @@ try {
     viewer.camera.cancelFlight();
     viewer.camera.setView({
       destination: viewer.scene.globe.ellipsoid.cartographicToCartesian({
-        longitude: (2.1 * Math.PI) / 180,
-        latitude: (48.5 * Math.PI) / 180,
-        height: 3000000,
+        longitude: (2.28515625 * Math.PI) / 180,
+        latitude: (48.779296875 * Math.PI) / 180,
+        height: 800000,
       }),
       orientation: { heading: 0, pitch: -Math.PI / 2, roll: 0 },
     });
@@ -95,35 +101,101 @@ try {
     const { viewer } = window.__godsEyeView;
     const p = viewer.scene.cartesianToCanvasCoordinates(
       viewer.scene.globe.ellipsoid.cartographicToCartesian({
-        longitude: (2.1 * Math.PI) / 180,
-        latitude: (48.5 * Math.PI) / 180,
+        longitude: (2.28515625 * Math.PI) / 180,
+        latitude: (48.779296875 * Math.PI) / 180,
         height: 0,
       }),
     );
     return { x: p.x, y: p.y, picked: viewer.scene.pick(p)?.id ?? null };
   });
+  assert.equal(point.picked, null);
+  await page.evaluate(async () => {
+    const Cesium = await import('/node_modules/.vite/deps/cesium.js');
+    const picking = await import('/src/data/pickRegistry.js');
+    picking.registerPickOwner(
+      'bitchat-qa-contact',
+      (id) => id === 'bitchat-qa-contact',
+    );
+    window.__bitchatQaContact = window.__godsEyeView.viewer.entities.add({
+      id: 'bitchat-qa-contact',
+      position: Cesium.Cartesian3.fromDegrees(2.28515625, 48.779296875, 1000),
+      point: {
+        pixelSize: 30,
+        color: Cesium.Color.CYAN,
+        disableDepthTestDistance: Infinity,
+      },
+    });
+  });
+  await page.waitForFunction(
+    ({ x, y }) => {
+      const { viewer } = window.__godsEyeView;
+      viewer.render();
+      return viewer.scene.pick({ x, y })?.id?.id === 'bitchat-qa-contact';
+    },
+    { timeout: 10000 },
+    point,
+  );
   await page.mouse.click(point.x, point.y);
-  await page.waitForSelector('.bitchat-card', { timeout: 10000 });
+  await new Promise((resolve) => setTimeout(resolve, 300));
   assert.equal(
-    await page.$eval(
-      '.bitchat-card',
-      (card) => card.querySelectorAll('img').length,
+    await page.evaluate(
+      () =>
+        window.__gevWorldOverlay.getDiagnostics().entriesBySource[
+          'bitchat-card'
+        ] || 0,
     ),
     0,
   );
+  await page.evaluate(async () => {
+    window.__godsEyeView.viewer.entities.remove(window.__bitchatQaContact);
+    const picking = await import('/src/data/pickRegistry.js');
+    picking.unregisterPickOwner('bitchat-qa-contact');
+    window.__godsEyeView.viewer.render();
+  });
+  await page.mouse.click(point.x, point.y);
+  await page.waitForFunction(
+    () =>
+      window.__gevWorldOverlay.getDiagnostics().paintedBySource[
+        'bitchat-card'
+      ] === 1,
+    { timeout: 10000 },
+  );
   assert.equal(
-    await page.$eval('.bitchat-card', (card) =>
-      card.textContent.includes('synthetic public text'),
+    await page.evaluate(() => window.__bitchatDrawnText.has('BITCHAT · u09t')),
+    true,
+  );
+  assert.equal(
+    await page.evaluate(() =>
+      [...window.__bitchatDrawnText].some((text) =>
+        text.startsWith(
+          '<img src=x onerror=alert(1)> synthetic public text · ',
+        ),
+      ),
     ),
     true,
   );
-  await page.screenshot({ path: 'qa-shots/bitchat.png' });
+  assert.equal(await page.$('img[onerror]'), null);
+  await page.screenshot({ path: 'qa-shots/bitchat-card.png' });
   await page.evaluate(() =>
     window.__godsEyeView.dataManager.setEnabled('bitchat', false),
   );
-  assert.equal(await page.$('.bitchat-card'), null);
+  await page.waitForFunction(
+    () =>
+      !window.__gevWorldOverlay.getDiagnostics().paintedBySource[
+        'bitchat-card'
+      ],
+  );
+  assert.equal(
+    await page.evaluate(
+      () =>
+        window.__gevWorldOverlay.getDiagnostics().entriesBySource[
+          'bitchat-card'
+        ] || 0,
+    ),
+    0,
+  );
   console.log(
-    'PASS 7 Bitchat browser assertions. Default off, enable, geometry, health, picking, text safety, disable.',
+    'PASS 10 Bitchat browser assertions. Default off, enable, geometry, health, empty-ground selection, contact ownership, HUD card, literal text safety, disable, cleanup.',
   );
 } finally {
   await browser.close();

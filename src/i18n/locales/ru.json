@@ -3060,12 +3060,11 @@
   },
   "Malformed Hub'Eau response": "Некорректный ответ Hub'Eau",
   "Bitchat activity": "Активность Bitchat",
-  "Close": "Закрыть",
-  "Cell {cell} · {people} people · {messages} messages": "Ячейка {cell} · {people} участников · {messages} сообщений",
   "Public messages from Bitchat location channels, shown live and not stored.": "Публичные сообщения из геоканалов Bitchat, показанные в реальном времени без сохранения.",
   "No public messages available.": "Нет доступных публичных сообщений.",
-  "{minutes} min ago": "{minutes} мин назад",
   "Bitchat messages unavailable": "Сообщения Bitchat недоступны",
   "{open}/{listed} relays · {status}": "{open}/{listed} ретрансляторов · {status}",
-  "At least three active keys per cell. Counts use the largest channel-level cohort. Public relay coverage is incomplete.": "Не менее трёх активных ключей на ячейку. Численность определяется по наибольшей группе одного уровня каналов. Охват публичных ретрансляторов неполный."
+  "At least three active keys per cell. Counts use the largest channel-level cohort. Public relay coverage is incomplete.": "Не менее трёх активных ключей на ячейку. Численность определяется по наибольшей группе одного уровня каналов. Охват публичных ретрансляторов неполный.",
+  "BITCHAT · {cell}": "BITCHAT · {cell}",
+  "{people} people · {messages} messages": "{people} участников · {messages} сообщений"
 }

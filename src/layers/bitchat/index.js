@@ -1,14 +1,17 @@
 import * as Cesium from 'cesium';
 import { t } from '../../i18n/index.js';
 import { geohashBounds, precisionForHeight } from './records.js';
-import { showBitchatCard } from './card.js';
+import { BITCHAT_CARD_SOURCE_ID, buildBitchatCard } from './cards.js';
 export { createBitchatSource } from './source.js';
 export { geohashBounds, precisionForHeight } from './records.js';
 
 /** Own batched activity geometry and its transient anonymous message card. */
 export function createBitchatLayer({
   source,
-  showCard = showBitchatCard,
+  overlayHost,
+  picking,
+  pointer,
+  screenSpaceEventHandlerFactory,
   now = () => Date.now(),
 } = {}) {
   if (
@@ -16,7 +19,8 @@ export function createBitchatLayer({
     typeof source?.getMessages !== 'function'
   )
     throw new TypeError('Bitchat requires snapshot and message sources');
-  let viewer, ground, outlines, handler, request, messageRequest, removeCard;
+  let viewer, ground, outlines, handler, request, messageRequest;
+  let selected = null;
   let renderSignature = null;
   let enabled = false,
     cells = [],
@@ -27,13 +31,14 @@ export function createBitchatLayer({
   function clearCard() {
     messageRequest?.abort();
     messageRequest = null;
-    removeCard?.();
-    removeCard = null;
+    selected = null;
+    overlayHost?.clearSource(BITCHAT_CARD_SOURCE_ID);
   }
   async function select(geohash) {
     const cell = cells.find((row) => row.geohash === geohash);
     if (!enabled || !cell) return;
-    clearCard();
+    messageRequest?.abort();
+    selected = geohash;
     const controller = new AbortController();
     messageRequest = controller;
     try {
@@ -46,9 +51,30 @@ export function createBitchatLayer({
         !enabled
       )
         return;
-      removeCard = showCard(viewer.container, cell, data, now());
+      if (data.people < 3 || !cells.some((row) => row.geohash === geohash)) {
+        clearCard();
+        return;
+      }
+      const bounds = geohashBounds(geohash);
+      overlayHost?.setEntries(
+        BITCHAT_CARD_SOURCE_ID,
+        [
+          {
+            ...buildBitchatCard(cell, data, now()),
+            position: Cesium.Cartesian3.fromDegrees(
+              (bounds.west + bounds.east) / 2,
+              (bounds.south + bounds.north) / 2,
+            ),
+          },
+        ],
+        { cohortLimit: 1, collisionCapacity: 1, moving: false },
+      );
+      viewer.scene.requestRender?.();
     } catch {
-      if (!controller.signal.aborted) error = t('Bitchat messages unavailable');
+      if (!controller.signal.aborted && messageRequest === controller) {
+        clearCard();
+        error = t('Bitchat messages unavailable');
+      }
     }
   }
   function render(snapshot) {
@@ -95,6 +121,7 @@ export function createBitchatLayer({
           }),
           classificationType: Cesium.ClassificationType.BOTH,
           releaseGeometryInstances: false,
+          allowPicking: false,
         }),
       );
     if (snapshot.coarse.length)
@@ -149,22 +176,47 @@ export function createBitchatLayer({
       ground.id = 'bitchat';
       outlines.id = 'bitchat-coarse';
       ground.show = outlines.show = false;
-      if (viewer.scene.canvas) {
-        handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-        handler.setInputAction(({ position }) => {
-          if (!enabled) return;
-          const id = viewer.scene.pick(position)?.id;
-          if (typeof id === 'string' && id.startsWith('bitchat:'))
-            void select(id.slice(8));
-        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-      }
+      overlayHost?.setVisible(BITCHAT_CARD_SOURCE_ID, false);
     },
     enable() {
       enabled = true;
+      overlayHost?.setVisible(BITCHAT_CARD_SOURCE_ID, true);
+      if (!handler && screenSpaceEventHandlerFactory && picking) {
+        // Ground rectangles leave contact picks to the layers above them.
+        handler = screenSpaceEventHandlerFactory(viewer);
+        handler.setInputAction(({ position }) => {
+          if (!enabled || (pointer && !pointer.isPointerFree())) return;
+          const id = picking.resolvePickId(viewer.scene.pick(position));
+          if (picking.isOwnedByOtherLayer('bitchat', id)) return;
+          const ray = viewer.camera.getPickRay?.(position);
+          const point =
+            (ray && viewer.scene.globe?.pick(ray, viewer.scene)) ??
+            viewer.camera.pickEllipsoid?.(position);
+          const carto = point && Cesium.Cartographic.fromCartesian(point);
+          const lon = carto && Cesium.Math.toDegrees(carto.longitude);
+          const lat = carto && Cesium.Math.toDegrees(carto.latitude);
+          const cell =
+            carto &&
+            cells.find(({ geohash }) => {
+              const b = geohashBounds(geohash);
+              return (
+                lon >= b.west &&
+                lon <= b.east &&
+                lat >= b.south &&
+                lat <= b.north
+              );
+            });
+          if (cell) void select(cell.geohash);
+          else clearCard();
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+      }
       if (ground) ground.show = outlines.show = true;
     },
     disable() {
       enabled = false;
+      handler?.destroy();
+      handler = null;
+      overlayHost?.setVisible(BITCHAT_CARD_SOURCE_ID, false);
       request?.abort();
       request = null;
       clearCard();
@@ -194,13 +246,17 @@ export function createBitchatLayer({
         );
         if (controller.signal.aborted || request !== controller || !enabled)
           return false;
-        clearCard();
         render(snapshot);
         cells = snapshot.cells;
         status = snapshot.status;
         relayStatus = snapshot.relays;
         lastUpdate = now();
         error = null;
+        if (selected) {
+          if (cells.some((cell) => cell.geohash === selected))
+            await select(selected);
+          else clearCard();
+        }
         return true;
       } catch (failure) {
         if (controller.signal.aborted || request !== controller || !enabled)

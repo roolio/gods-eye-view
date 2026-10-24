@@ -104,3 +104,122 @@ test('warming and degraded coverage report through feed health and failure clear
   assert.equal(h.resources[0].length, 0);
   h.layer.destroy();
 });
+
+test('ground selection respects contacts and tools, refreshes and closes with privacy or lifecycle changes', async () => {
+  const picking = await import('../../data/pickRegistry.js');
+  let click,
+    picked = null,
+    free = true;
+  let nextSnapshot = snapshot;
+  let data = {
+    people: 12,
+    messages: [{ text: '<img onerror=alert(1)>', at: 1800000000 }],
+  };
+  const entries = new Map(),
+    visible = new Map();
+  const h = harness(async () => snapshot);
+  h.layer.destroy();
+  h.viewer.camera.pickEllipsoid = () =>
+    Cesium.Cartesian3.fromDegrees(2.1, 48.5);
+  h.viewer.scene.pick = () => picked;
+  const layer = createBitchatLayer({
+    source: {
+      getSnapshot: async () => nextSnapshot,
+      getMessages: async () => data,
+    },
+    now: () => 1800000060000,
+    picking,
+    pointer: { isPointerFree: () => free },
+    overlayHost: {
+      setEntries(id, rows) {
+        entries.set(id, rows);
+      },
+      setVisible(id, value) {
+        visible.set(id, value);
+      },
+      clearSource(id) {
+        entries.delete(id);
+      },
+    },
+    screenSpaceEventHandlerFactory: () => ({
+      setInputAction(action) {
+        click = action;
+      },
+      destroy() {},
+    }),
+  });
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+  layer.init(h.viewer);
+  layer.enable();
+  await layer.update();
+  picking.registerPickOwner('test-contact', (id) => id === 'flight:123');
+  picked = { id: 'flight:123' };
+  click({ position: { x: 10, y: 10 } });
+  await flush();
+  assert.equal(entries.has('bitchat-card'), false);
+  picked = null;
+  free = false;
+  click({ position: { x: 10, y: 10 } });
+  await flush();
+  assert.equal(entries.has('bitchat-card'), false);
+  free = true;
+  click({ position: { x: 10, y: 10 } });
+  await flush();
+  assert.equal(entries.get('bitchat-card')[0].title, 'BITCHAT · u09');
+  assert.deepEqual(entries.get('bitchat-card')[0].details, [
+    '12 people · 5 messages',
+    '<img onerror=alert(1)> · 1 minute ago',
+    'Public messages from Bitchat location channels, shown live and not stored.',
+  ]);
+  data = { people: 13, messages: [{ text: 'fresh', at: 1800000060 }] };
+  await layer.update();
+  assert.equal(
+    entries.get('bitchat-card')[0].details[1],
+    'fresh · this minute',
+  );
+  data = { people: 0, messages: [] };
+  await layer.update();
+  assert.equal(entries.has('bitchat-card'), false);
+  data = { people: 12, messages: [] };
+  click({ position: { x: 10, y: 10 } });
+  await flush();
+  assert.equal(entries.get('bitchat-card')[0].title, 'BITCHAT · u09');
+  nextSnapshot = { ...snapshot, cells: [] };
+  await layer.update();
+  assert.equal(entries.has('bitchat-card'), false);
+  nextSnapshot = snapshot;
+  await layer.update();
+  click({ position: { x: 10, y: 10 } });
+  await flush();
+  h.viewer.camera.pickEllipsoid = () => Cesium.Cartesian3.fromDegrees(-90, 0);
+  click({ position: { x: 10, y: 10 } });
+  assert.equal(entries.has('bitchat-card'), false);
+  h.viewer.camera.pickEllipsoid = () =>
+    Cesium.Cartesian3.fromDegrees(2.1, 48.5);
+  click({ position: { x: 10, y: 10 } });
+  await flush();
+  assert.equal(entries.get('bitchat-card')[0].title, 'BITCHAT · u09');
+  layer.disable();
+  assert.equal(visible.get('bitchat-card'), false);
+  assert.equal(entries.has('bitchat-card'), false);
+  assert.equal(picking.findPickOwner('bitchat:u09'), null);
+  layer.destroy();
+  picking.unregisterPickOwner('test-contact');
+});
+
+test('cards cap message excerpts and keep public content as literal text', async () => {
+  const { buildBitchatCard } = await import('./cards.js');
+  const card = buildBitchatCard(
+    snapshot.cells[0],
+    {
+      people: 12,
+      messages: Array.from({ length: 8 }, () => ({
+        text: 'x'.repeat(180),
+        at: 1800000000,
+      })),
+    },
+    1800000060000,
+  );
+  assert.equal(card.details.length, 7);
+  assert.equal(card.details[1], `${'x'.repeat(139)}… · 1 minute ago`);
+});

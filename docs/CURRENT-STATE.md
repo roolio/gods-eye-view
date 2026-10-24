@@ -6182,7 +6182,12 @@ enabled. Camera heights above 8,000 km use length-2 geohashes, above 2,000 km us
 length 3, and lower views use length 4. Batched ground rectangles show density
 with a logarithmic color ramp. Coarser channels appear as faint outlines only.
 Clicking a density cell fetches up to 20 recent anonymous texts. The transient
-card displays relative times and the public-channel retention notice. Disabling
+world-overlay card shows up to five messages, each capped at 140 characters,
+with relative times and the public-channel retention notice. Its anchor is the
+cell center. Ground-coordinate selection leaves registered contact picks and
+claimed tool input alone. The open card refreshes with each poll and closes
+when the cell disappears, falls below the privacy threshold, or the user clicks
+outside activity cells. Disabling
 the layer clears its geometry and card. Share links carry only its enabled state
 with token `7`. Voice, analyst tools and Director scenes have no new integration.
 
