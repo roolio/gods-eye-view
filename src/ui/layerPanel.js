@@ -73,6 +73,7 @@ const PANEL_GROUPS = [
       'earthquakes',
       'local-firms',
       'fire-perimeters',
+      'news-events',
       'gnss-integrity',
       'bitchat',
     ],

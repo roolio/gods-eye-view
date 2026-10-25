@@ -1106,5 +1106,8 @@
   "src/layers/bitchat/records.test.mjs",
   "server/providers/bitchat/store.test.mjs",
   "server/providers/bitchat/pool.test.mjs",
-  "scripts/qa-bitchat.mjs"
+  "scripts/qa-bitchat.mjs",
+  "src/layers/newsEvents/records.test.mjs",
+  "src/layers/newsEvents/ownership.test.mjs",
+  "src/data/newsEventsProxy.test.mjs"
 ]

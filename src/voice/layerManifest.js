@@ -416,6 +416,9 @@ export const VOICE_OFF_LAYERS = Object.freeze({
     'static regional reference network; panel and share-link control only in V1',
   'flood-vigilance':
     'regional flood bulletin; panel and share-link control only in V1',
+  // The Realtime prompt budget (pointAndAsk.test.mjs) has no room for one
+  // more layer's enum, alias and field entries.
+  'news-events': 'prompt budget; reachable from the Layers panel',
 });
 
 const TYPE_NAMES = Object.freeze({

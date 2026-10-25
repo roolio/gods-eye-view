@@ -2589,7 +2589,12 @@
       "src/layers/bitchat/index.js",
       "src/layers/bitchat/records.js",
       "src/layers/bitchat/source.js",
-      "src/layers/bitchat/cards.js"
+      "src/layers/bitchat/cards.js",
+      "src/app/layers/newsEvents.js",
+      "src/layers/newsEvents/index.js",
+      "src/layers/newsEvents/source.js",
+      "src/layers/newsEvents/records.js",
+      "src/layers/newsEvents/cards.js"
     ],
     "external": [
       "hls.js",
@@ -3176,7 +3181,12 @@
       "src/layers/bitchat/index.js",
       "src/layers/bitchat/records.js",
       "src/layers/bitchat/source.js",
-      "src/layers/bitchat/cards.js"
+      "src/layers/bitchat/cards.js",
+      "src/app/layers/newsEvents.js",
+      "src/layers/newsEvents/index.js",
+      "src/layers/newsEvents/source.js",
+      "src/layers/newsEvents/records.js",
+      "src/layers/newsEvents/cards.js"
     ],
     "external": [
       "hls.js",
@@ -3620,7 +3630,9 @@
       "src/layers/floodVigilance/source.js",
       "src/layers/floodVigilance/records.js",
       "src/layers/bitchat/source.js",
-      "src/layers/bitchat/records.js"
+      "src/layers/bitchat/records.js",
+      "src/layers/newsEvents/source.js",
+      "src/layers/newsEvents/records.js"
     ],
     "external": []
   },
@@ -3860,6 +3872,23 @@
     ],
     "external": ["cesium"]
   },
+  "news-events": {
+    "exports": ["./layers/news-events"],
+    "modules": [
+      "src/layers/newsEvents/index.js",
+      "src/sources/httpBody.js",
+      "src/i18n/marker.js",
+      "src/layers/newsEvents/source.js",
+      "src/layers/newsEvents/records.js",
+      "src/layers/newsEvents/cards.js",
+      "src/i18n/index.js",
+      "src/i18n/locale.js",
+      "src/i18n/locales/es.json",
+      "src/i18n/locales/ru.json",
+      "src/i18n/locales/zh-CN.json"
+    ],
+    "external": ["cesium"]
+  },
   "gnss": {
     "exports": ["./layers/gnss"],
     "modules": [
@@ -3894,6 +3923,16 @@
       "src/sources/httpBody.js",
       "src/i18n/marker.js",
       "src/layers/perimeters/source.js"
+    ],
+    "external": []
+  },
+  "news-events-source": {
+    "exports": ["./layers/news-events/source"],
+    "modules": [
+      "src/layers/newsEvents/records.js",
+      "src/sources/httpBody.js",
+      "src/i18n/marker.js",
+      "src/layers/newsEvents/source.js"
     ],
     "external": []
   },

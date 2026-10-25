@@ -3001,5 +3001,24 @@
     "one": "{count} persona",
     "many": "{count} de personas",
     "other": "{count} personas"
-  }
+  },
+  "news event|Violence": "Violencia",
+  "news event|Protest": "Protesta",
+  "news event|Coercion": "Coerción",
+  "news event|Tension": "Tensión",
+  "{count} articles in 24 h": {
+    "one": "{count} artículo en 24 h",
+    "many": "{count} artículos en 24 h",
+    "other": "{count} artículos en 24 h"
+  },
+  "{age} ago": "hace {age}",
+  "Machine-coded media reports, not verified incidents": "Noticias codificadas automáticamente, no incidentes verificados",
+  "Top article ↗ · click card to open": "Artículo principal ↗ · haz clic en la tarjeta para abrir",
+  "NEWS · {place}": "NOTICIAS · {place}",
+  "Unnamed place": "Lugar sin nombre",
+  "Open the top article for {title}": "Abrir el artículo principal de {title}",
+  "News events source unavailable": "Fuente de eventos de noticias no disponible",
+  "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT codifica artículos de prensa como eventos y los sitúa a partir del texto. El color indica el tipo más frecuente en cada lugar; el tamaño, el número de artículos.",
+  "Malformed news events snapshot": "Instantánea de eventos de noticias mal formada",
+  "News Events (24h)": "Eventos de noticias (24 h)"
 }
