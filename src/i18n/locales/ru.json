@@ -3058,5 +3058,25 @@
     "many": "{count} гидропостов в поле зрения, без показаний 6 ч: {stale}",
     "other": "{count} гидропоста в поле зрения, без показаний 6 ч: {stale}"
   },
-  "Malformed Hub'Eau response": "Некорректный ответ Hub'Eau"
+  "Malformed Hub'Eau response": "Некорректный ответ Hub'Eau",
+  "news event|Violence": "Насилие",
+  "news event|Protest": "Протест",
+  "news event|Coercion": "Принуждение",
+  "news event|Tension": "Напряжённость",
+  "{count} articles in 24 h": {
+    "one": "{count} статья за 24 ч",
+    "few": "{count} статьи за 24 ч",
+    "many": "{count} статей за 24 ч",
+    "other": "{count} статьи за 24 ч"
+  },
+  "{age} ago": "{age} назад",
+  "Machine-coded media reports, not verified incidents": "Автоматически закодированные сообщения СМИ, а не подтверждённые инциденты",
+  "Top article ↗ · click card to open": "Главная статья ↗ · нажмите на карточку, чтобы открыть",
+  "NEWS · {place}": "НОВОСТИ · {place}",
+  "Unnamed place": "Место без названия",
+  "Open the top article for {title}": "Открыть главную статью: {title}",
+  "News events source unavailable": "Источник новостных событий недоступен",
+  "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT кодирует новостные статьи как события и определяет их место по тексту. Цвет показывает самый частый тип в каждом месте, размер показывает число статей.",
+  "Malformed news events snapshot": "Некорректный снимок новостных событий",
+  "News Events (24h)": "Новостные события (24 ч)"
 }

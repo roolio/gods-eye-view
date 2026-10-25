@@ -201,7 +201,7 @@ export const DATA_CREDITS = [
   {
     key: 'gdelt',
     html:
-      'Cockpit regional headlines: ' +
+      'News events and cockpit regional headlines: ' +
       '<a href="https://www.gdeltproject.org/about.html" target="_blank" rel="noopener">GDELT Project</a> ' +
       '(location-matched article links; publisher terms apply)',
   },

@@ -1101,5 +1101,8 @@
   "src/layers/floodVigilance/records.test.mjs",
   "server/providers/floodVigilance.test.mjs",
   "src/layers/floodVigilance/index.test.mjs",
-  "src/layers/floodVigilance/testFixtures.mjs"
+  "src/layers/floodVigilance/testFixtures.mjs",
+  "src/layers/newsEvents/records.test.mjs",
+  "src/layers/newsEvents/ownership.test.mjs",
+  "src/data/newsEventsProxy.test.mjs"
 ]

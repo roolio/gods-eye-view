@@ -2851,5 +2851,22 @@
   "{count} gauging stations in view, {stale} without a reading for 6 h": {
     "other": "视野内 {count} 个水文站，其中 {stale} 个 6 小时无读数"
   },
-  "Malformed Hub'Eau response": "Hub'Eau 响应格式错误"
+  "Malformed Hub'Eau response": "Hub'Eau 响应格式错误",
+  "news event|Violence": "暴力",
+  "news event|Protest": "抗议",
+  "news event|Coercion": "胁迫",
+  "news event|Tension": "紧张",
+  "{count} articles in 24 h": {
+    "other": "24 小时内 {count} 篇报道"
+  },
+  "{age} ago": "{age}前",
+  "Machine-coded media reports, not verified incidents": "机器编码的媒体报道，并非已核实事件",
+  "Top article ↗ · click card to open": "热门报道 ↗ · 点击卡片打开",
+  "NEWS · {place}": "新闻 · {place}",
+  "Unnamed place": "未命名地点",
+  "Open the top article for {title}": "打开 {title} 的热门报道",
+  "News events source unavailable": "新闻事件数据源不可用",
+  "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT 将新闻报道编码为事件，并根据文本确定地点。颜色表示每个地点最常见的类型，大小表示报道数量。",
+  "Malformed news events snapshot": "新闻事件快照格式错误",
+  "News Events (24h)": "新闻事件（24 小时）"
 }
