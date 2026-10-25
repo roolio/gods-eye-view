@@ -1101,5 +1101,10 @@
   "src/layers/floodVigilance/records.test.mjs",
   "server/providers/floodVigilance.test.mjs",
   "src/layers/floodVigilance/index.test.mjs",
-  "src/layers/floodVigilance/testFixtures.mjs"
+  "src/layers/floodVigilance/testFixtures.mjs",
+  "src/layers/bitchat/ownership.test.mjs",
+  "src/layers/bitchat/records.test.mjs",
+  "server/providers/bitchat/store.test.mjs",
+  "server/providers/bitchat/pool.test.mjs",
+  "scripts/qa-bitchat.mjs"
 ]

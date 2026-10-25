@@ -120,7 +120,8 @@
     "{value} KM/S",
     "ΔE",
     "ΔN",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "BITCHAT · {cell}"
   ],
   "ru": [
     "AIS: --",
@@ -136,7 +137,8 @@
     "R&B",
     "REC",
     "VS",
-    "WHOT/BHOT"
+    "WHOT/BHOT",
+    "BITCHAT · {cell}"
   ],
   "zh-CN": [
     "1090 MHz",
@@ -191,6 +193,7 @@
     "{value} KM/S",
     "ΔE",
     "ΔN",
-    "▲ {frp} MW"
+    "▲ {frp} MW",
+    "BITCHAT · {cell}"
   ]
 }
