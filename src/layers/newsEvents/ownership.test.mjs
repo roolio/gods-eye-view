@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import * as Cesium from 'cesium';
 import { createNewsEventsLayer, newsEventPixelSize } from './index.js';
 import { buildNewsEventCard, shortPlaceName } from './cards.js';
 
@@ -115,6 +116,32 @@ test('each location renders as one point, the busiest drawn on top', async () =>
     h.layer.getRowControls().legend.map(({ count }) => count),
     [0, 2, 0, 0],
   );
+});
+
+test('markers sit at a fixed ground height instead of clamping to tiles', async () => {
+  const h = harness({ getSnapshot: async () => [row] });
+  assert.equal(await h.layer.update(h.viewer), true);
+  const [entity] = h.sources[0].entities.values;
+  // Clamping against hidden-globe photoreal tiles sank markers kilometres
+  // under the surface, so they slid off their place on every zoom.
+  assert.equal(entity.point.heightReference, undefined);
+  const at = Cesium.Cartographic.fromCartesian(
+    entity.position.getValue(Cesium.JulianDate.now()),
+  );
+  assert.ok(Math.abs(Cesium.Math.toDegrees(at.latitude) - row.lat) < 1e-9);
+  assert.ok(Math.abs(Cesium.Math.toDegrees(at.longitude) - row.lon) < 1e-9);
+  assert.ok(Math.abs(at.height) < 1e-3);
+});
+
+test('with the globe drawn, markers take its terrain height', async () => {
+  const h = harness({ getSnapshot: async () => [row] });
+  h.viewer.scene.globe = { show: true, getHeight: () => 35 };
+  assert.equal(await h.layer.update(h.viewer), true);
+  const [entity] = h.sources[0].entities.values;
+  const at = Cesium.Cartographic.fromCartesian(
+    entity.position.getValue(Cesium.JulianDate.now()),
+  );
+  assert.ok(Math.abs(at.height - 35) < 1e-3);
 });
 
 test('late refresh cannot publish after disable or destroy', async () => {

@@ -24,6 +24,25 @@ export function newsEventPixelSize(articleCount) {
   return Math.min(18, 5 + 2 * Math.log2(count));
 }
 
+/**
+ * A fixed marker position on the ground, never clamped. With Google 3D tiles
+ * the globe is hidden, so CLAMP_TO_GROUND samples whatever coarse tile is
+ * loaded: markers sank 5 to 150 km under the surface and changed depth with
+ * every zoom, and an always-on-top point that deep slides off its place as
+ * the camera moves. The globe height is used only when the globe is drawn.
+ */
+function markerPosition(viewer, row) {
+  const globe = viewer?.scene?.globe;
+  const ground = globe?.show
+    ? globe.getHeight?.(Cesium.Cartographic.fromDegrees(row.lon, row.lat))
+    : null;
+  return Cesium.Cartesian3.fromDegrees(
+    row.lon,
+    row.lat,
+    Number.isFinite(ground) ? ground : 0,
+  );
+}
+
 /** Own one GDELT news-event display, its refresh lifecycle, and click selection. */
 export function createNewsEventsLayer({
   source,
@@ -206,7 +225,7 @@ export function createNewsEventsLayer({
           (row) =>
             new Cesium.Entity({
               id: `${PICK_PREFIX}${row.stableId}`,
-              position: Cesium.Cartesian3.fromDegrees(row.lon, row.lat),
+              position: markerPosition(_viewer, row),
               point: {
                 pixelSize: newsEventPixelSize(row.articleCount),
                 color: Cesium.Color.fromCssColorString(
@@ -214,7 +233,6 @@ export function createNewsEventsLayer({
                 ).withAlpha(0.85),
                 outlineColor: Cesium.Color.BLACK.withAlpha(0.6),
                 outlineWidth: 1,
-                heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
                 // Always on top: a marker hidden behind 3D tiles is a lost report.
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
               },
