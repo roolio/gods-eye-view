@@ -25,6 +25,7 @@ import { mapillaryProxy } from './mapillary.js';
 import { keySetupEndpoint } from '../standalone/key-setup.js';
 import { weatherProxy } from './weather.js';
 import { firePerimetersProxy } from './firePerimeters.js';
+import { bitchatProxy } from './bitchat.js';
 import { newsEventsProxy } from './newsEvents.js';
 import { gnssIntegrityProxy } from './gnssIntegrity.js';
 import { cycloneProxy } from './cyclones.js';
@@ -68,6 +69,7 @@ function localProviderPlugins({ realtime, gemini } = {}) {
     newsEventsProxy(),
     gnssIntegrityProxy(),
     floodVigilanceProxy(),
+    bitchatProxy(),
     keySetupEndpoint(),
   ];
 }

@@ -2585,6 +2585,11 @@
       "src/voice/geminiAudio.js",
       "src/voice/geminiCaptureWorklet.js",
       "src/ui/statusBadge.js",
+      "src/app/layers/bitchat.js",
+      "src/layers/bitchat/index.js",
+      "src/layers/bitchat/records.js",
+      "src/layers/bitchat/source.js",
+      "src/layers/bitchat/cards.js",
       "src/app/layers/newsEvents.js",
       "src/layers/newsEvents/index.js",
       "src/layers/newsEvents/source.js",
@@ -3172,6 +3177,11 @@
       "src/ui/statusText.js",
       "src/ui/layerNames.js",
       "src/layers/streetLevel/providers/mapillary/policy.js",
+      "src/app/layers/bitchat.js",
+      "src/layers/bitchat/index.js",
+      "src/layers/bitchat/records.js",
+      "src/layers/bitchat/source.js",
+      "src/layers/bitchat/cards.js",
       "src/app/layers/newsEvents.js",
       "src/layers/newsEvents/index.js",
       "src/layers/newsEvents/source.js",
@@ -3619,6 +3629,8 @@
       "src/data/local_data/idfm_transit_network/network.geojson",
       "src/layers/floodVigilance/source.js",
       "src/layers/floodVigilance/records.js",
+      "src/layers/bitchat/source.js",
+      "src/layers/bitchat/records.js",
       "src/layers/newsEvents/source.js",
       "src/layers/newsEvents/records.js"
     ],
@@ -4120,5 +4132,32 @@
       "src/i18n/marker.js"
     ],
     "external": ["cesium"]
+  },
+  "bitchat": {
+    "exports": ["./layers/bitchat"],
+    "modules": [
+      "src/layers/bitchat/index.js",
+      "src/layers/bitchat/records.js",
+      "src/layers/bitchat/source.js",
+      "src/layers/bitchat/cards.js",
+      "src/sources/httpBody.js",
+      "src/i18n/marker.js",
+      "src/i18n/index.js",
+      "src/i18n/locale.js",
+      "src/i18n/locales/es.json",
+      "src/i18n/locales/ru.json",
+      "src/i18n/locales/zh-CN.json"
+    ],
+    "external": ["cesium"]
+  },
+  "bitchat-source": {
+    "exports": ["./layers/bitchat/source"],
+    "modules": [
+      "src/layers/bitchat/source.js",
+      "src/layers/bitchat/records.js",
+      "src/sources/httpBody.js",
+      "src/i18n/marker.js"
+    ],
+    "external": []
   }
 }

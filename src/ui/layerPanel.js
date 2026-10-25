@@ -75,6 +75,7 @@ const PANEL_GROUPS = [
       'fire-perimeters',
       'news-events',
       'gnss-integrity',
+      'bitchat',
     ],
   },
   {

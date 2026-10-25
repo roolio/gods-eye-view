@@ -448,3 +448,23 @@ NOAA density imagery with the raw GLM product.
 ## In-app attribution
 
 The required Google Maps / Cesium credit renders on the on-globe credit line (`#cesium-credits`, bottom-left) and must stay visible — including in clean-view and recording modes (the whole line, logo + "Google Maps" + the "Data attribution" link, stays on screen; only the GEV panels/HUD fade). The layer-specific credits (adsb.lol, adsbdb, TeleGeography, OSM datacenters/dams/roads, NASA FIRMS, CelesTrak, USGS, City of Austin, Fintraffic, GBFS, Radio Browser, OpenSky, AISStream) are registered into the expandable **"Data attribution"** popover on that credit line via `viewer.creditDisplay.addStaticCredit(new Cesium.Credit(html, /* showOnScreen */ false))` — see `src/data/dataCredits.js`. When you add a new data source, add its license and attribution to this file **and** append an entry to `DATA_CREDITS` in `src/data/dataCredits.js` so it surfaces in the app.
+
+### Bitchat public location channels
+
+The optional Bitchat activity layer listens live to unencrypted Nostr kinds
+20000 and 20001 on public relays listed by
+[permissionlesstech/georelays](https://github.com/permissionlesstech/georelays).
+The relay directory is fetched at runtime. Public messages remain authored by
+their senders; no blanket content redistribution license is asserted. The app
+fetches transient public messages at runtime and bundles no message dataset.
+
+The local server retains presence for five minutes and up to 50 chat texts per
+channel for one hour in memory only. It hashes keys with a random process salt,
+discards nicknames, suppresses cohorts below three, and exposes only geohash
+lengths 2 through 4. Counts take the largest distinct-key cohort across channel
+levels, because Bitchat derives separate keys per channel. Counts are an activity
+estimate, not verified people or device locations. Chat actors remain eligible
+through the one-hour chat window. The pool shuts down and clears all observations
+after ten minutes without API traffic. Nothing is written to disk or logged.
+Event signatures are not verified. Malicious or duplicate identities can distort
+counts. Coverage depends on relay availability and live listening time.

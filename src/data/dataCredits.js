@@ -109,6 +109,10 @@ export const DATA_CREDITS = [
       '(non-commercial)',
   },
   {
+    key: 'bitchat',
+    html: 'Bitchat public location channels via <a href="https://github.com/permissionlesstech/georelays" target="_blank" rel="noopener">georelays</a> and public Nostr relays. Live anonymous aggregates.',
+  },
+  {
     key: 'adsblol',
     html:
       'Military flights, aircraft traces, bounded regional flight fallback &amp; GNSS navigation integrity: ' +

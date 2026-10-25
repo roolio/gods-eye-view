@@ -49,6 +49,7 @@ export const CATALOG_SOURCE_CONTRACTS = Object.freeze({
   'news-events': contract(['news-events'], ['getSnapshot']),
   'air-quality': contract(['air-quality'], ['getSnapshot']),
   'gnss-integrity': contract(['gnss-integrity'], ['getSnapshot']),
+  bitchat: contract(['bitchat'], ['getSnapshot', 'getMessages']),
   cables: contract(['telegeography-submarine-cables'], ['fetch']),
   transit: contract(['transit'], ['requestSnapshot', 'getHistory']),
   'transit-network': contract(['transit-network'], ['fetch']),

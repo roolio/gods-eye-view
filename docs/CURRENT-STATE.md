@@ -6174,3 +6174,37 @@ when their footprints touch or contain one another, never across a seam toleranc
 - `scripts/qa-form-fields.mjs` exercises native selections, number validity,
   calibration commit/cancel and stale-camera/disposal guards against an installed
   controller with fixture ports, plus default/Cyber and narrow translated layouts.
+
+### Bitchat activity
+
+The keyless `bitchat` layer is off by default and appears under Events beside
+GNSS. It polls anonymous `/api/bitchat/cells` aggregates every 15 seconds while
+enabled. Camera heights above 8,000 km use length-2 geohashes, above 2,000 km use
+length 3, and lower views use length 4. Batched ground rectangles show density
+with a logarithmic color ramp. Coarser channels appear as faint outlines only.
+Clicking a density cell fetches up to 20 recent anonymous texts. The transient
+world-overlay card shows up to five messages, each capped at 140 characters,
+with relative times and the public-channel retention notice. Its anchor is the
+cell center. Ground-coordinate selection leaves registered contact picks and
+claimed tool input alone. The open card refreshes with each poll and closes
+when the cell disappears, falls below the privacy threshold, or the user clicks
+outside activity cells. Disabling
+the layer clears its geometry and card. Share links carry only its enabled state
+with token `7`. Voice, analyst tools and Director scenes have no new integration.
+
+The server starts its live relay pool on the first valid Bitchat request, caches
+the public georelays directory for the process lifetime, limits concurrent
+connection attempts to 32, retries failed connections with backoff, and expires
+idle connections and all observations after ten minutes without requests. It
+prunes five-minute presence and one-hour chat maps on reads and every second.
+Chats are capped at 50 per exact channel. Counts include retained chat actors,
+use the maximum distinct-actor cohort across levels, and suppress cells below
+three. Both endpoints enforce same-site access and rate limits. Keys and
+nicknames never leave the event parser. Signature verification is out of scope;
+counts are unverified activity estimates and relay coverage is incomplete.
+The feed warms for 60 seconds and reports live at 25 percent relay availability,
+degraded with fewer open relays, and down with none. Unit coverage lives beside
+`server/providers/bitchat/` and `src/layers/bitchat/`.
+The deterministic browser gate is `node scripts/qa-bitchat.mjs
+http://127.0.0.1:4173/?welcome=0`. It checks the default-off state, batched
+geometry, feed health, real cell picking, text-only messages, and disable cleanup.
