@@ -43,6 +43,17 @@ function markerPosition(viewer, row) {
   );
 }
 
+/**
+ * Horizon occluder sunk 1 km below WGS84, as in the street-level cones: ground
+ * can lie below the ellipsoid, and an occluder at 0 m would hide markers on it.
+ */
+const HORIZON_DEPTH_M = 1000;
+const HORIZON_ELLIPSOID = new Cesium.Ellipsoid(
+  Cesium.Ellipsoid.WGS84.radii.x - HORIZON_DEPTH_M,
+  Cesium.Ellipsoid.WGS84.radii.y - HORIZON_DEPTH_M,
+  Cesium.Ellipsoid.WGS84.radii.z - HORIZON_DEPTH_M,
+);
+
 /** Own one GDELT news-event display, its refresh lifecycle, and click selection. */
 export function createNewsEventsLayer({
   source,
@@ -67,6 +78,44 @@ export function createNewsEventsLayer({
   let _selectedCardId = null;
   /** @type {Map<string, Object>} */
   const _rowById = new Map();
+  /** @type {Array<{entity: Cesium.Entity, position: Cesium.Cartesian3}>} */
+  let _markers = [];
+  const _occluder = new Cesium.EllipsoidalOccluder(HORIZON_ELLIPSOID);
+  let _culledFrom = null;
+  let _stopCulling = null;
+
+  /**
+   * Hide markers behind the horizon. They skip the depth test and the globe
+   * is hidden under Google 3D tiles, so nothing else stops the far side of
+   * the planet drawing through it, sliding the wrong way as the camera moves.
+   */
+  function cullHorizon(force = false) {
+    const position = _viewer?.camera?.positionWC;
+    if (!position) return;
+    if (
+      !force &&
+      _culledFrom &&
+      Cesium.Cartesian3.equals(_culledFrom, position)
+    )
+      return;
+    _culledFrom = Cesium.Cartesian3.clone(position, _culledFrom);
+    _occluder.cameraPosition = position;
+    for (const marker of _markers) {
+      const show = _occluder.isPointVisible(marker.position);
+      if (marker.entity.show !== show) marker.entity.show = show;
+    }
+  }
+
+  function startCulling() {
+    _stopCulling ||=
+      _viewer?.scene?.preRender?.addEventListener(() => cullHorizon()) || null;
+  }
+
+  function stopCulling() {
+    _stopCulling?.();
+    _stopCulling = null;
+    _culledFrom = null;
+  }
 
   const canSelect = () =>
     overlayHost && screenSpaceEventHandlerFactory && picking;
@@ -196,6 +245,7 @@ export function createNewsEventsLayer({
       if (_dataSource) _dataSource.show = true;
       overlayHost?.setVisible?.(NEWS_EVENTS_OVERLAY_SOURCE_ID, true);
       installClickHandler();
+      startCulling();
     },
 
     disable() {
@@ -203,6 +253,7 @@ export function createNewsEventsLayer({
       _request = null;
       _enabled = false;
       if (_dataSource) _dataSource.show = false;
+      stopCulling();
       removeClickHandler();
       clearSelection();
     },
@@ -221,11 +272,13 @@ export function createNewsEventsLayer({
         const drawOrder = rows
           .slice()
           .sort((a, b) => a.articleCount - b.articleCount);
-        const nextEntities = drawOrder.map(
-          (row) =>
-            new Cesium.Entity({
+        const nextMarkers = drawOrder.map((row) => {
+          const position = markerPosition(_viewer, row);
+          return {
+            position,
+            entity: new Cesium.Entity({
               id: `${PICK_PREFIX}${row.stableId}`,
-              position: markerPosition(_viewer, row),
+              position,
               point: {
                 pixelSize: newsEventPixelSize(row.articleCount),
                 color: Cesium.Color.fromCssColorString(
@@ -237,13 +290,16 @@ export function createNewsEventsLayer({
                 disableDepthTestDistance: Number.POSITIVE_INFINITY,
               },
             }),
-        );
+          };
+        });
         _rowById.clear();
         for (const row of rows) _rowById.set(row.stableId, row);
         _dataSource.entities.suspendEvents();
         _dataSource.entities.removeAll();
-        for (const entity of nextEntities) _dataSource.entities.add(entity);
+        for (const { entity } of nextMarkers) _dataSource.entities.add(entity);
         _dataSource.entities.resumeEvents();
+        _markers = nextMarkers;
+        cullHorizon(true);
         // Refresh (or drop) the selected location's card against the new feed.
         if (_selectedId) publishSelectedCard();
         _count = rows.length;
@@ -265,6 +321,8 @@ export function createNewsEventsLayer({
     destroy(viewer = _viewer) {
       _request?.abort();
       _request = null;
+      stopCulling();
+      _markers = [];
       removeClickHandler();
       clearSelection();
       _rowById.clear();

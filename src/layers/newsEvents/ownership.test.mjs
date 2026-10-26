@@ -144,6 +144,46 @@ test('with the globe drawn, markers take its terrain height', async () => {
   assert.ok(Math.abs(at.height - 35) < 1e-3);
 });
 
+test('markers behind the horizon are hidden, and come back as the camera turns', async () => {
+  const h = harness({
+    getSnapshot: async () => [
+      row,
+      { ...row, stableId: 'sydney', lat: -33.87, lon: 151.21 },
+    ],
+  });
+  const listeners = new Set();
+  const over = (lon, lat) => Cesium.Cartesian3.fromDegrees(lon, lat, 8_000_000);
+  h.viewer.camera = { positionWC: over(2.35, 46) };
+  h.viewer.scene.preRender = {
+    addEventListener(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  // The listener attaches on enable; the harness enabled before the camera
+  // existed, so enable again now that the viewer has one.
+  h.layer.enable(h.viewer);
+  assert.equal(await h.layer.update(h.viewer), true);
+  const shown = () =>
+    Object.fromEntries(
+      h.sources[0].entities.values.map((entity) => [entity.id, entity.show]),
+    );
+  // Without the globe nothing hides the far side: Sydney would draw through
+  // the planet over Europe and slide the wrong way on every zoom.
+  assert.deepEqual(shown(), {
+    'news-event:sydney': false,
+    'news-event:-1456928': true,
+  });
+  h.viewer.camera.positionWC = over(151.21, -33.87);
+  for (const listener of listeners) listener();
+  assert.deepEqual(shown(), {
+    'news-event:sydney': true,
+    'news-event:-1456928': false,
+  });
+  h.layer.disable(h.viewer);
+  assert.equal(listeners.size, 0);
+});
+
 test('late refresh cannot publish after disable or destroy', async () => {
   for (const action of ['disable', 'destroy']) {
     let resolve, signal;
