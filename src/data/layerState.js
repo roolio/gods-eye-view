@@ -23,7 +23,7 @@ const NEW_SINGLE_CHARACTER_TOKEN_PATTERN = /^[0-9]$/;
  * out-of-grammar ID is rejected outright, because half an address is a
  * DIFFERENT aircraft, not a shorter name for the same one.
  */
-const TRACKING_ID_GRAMMAR = /^[0-9a-z~_-]{1,16}$/;
+export const TRACKING_ID_GRAMMAR = /^[0-9a-z~_-]{1,16}$/;
 /**
  * Ceilings for the untrusted v2 layer fields. The layer ceiling covers the
  * complete reserved one-character space plus every two-character base-36
@@ -298,6 +298,20 @@ function satelliteFilterOption() {
 }
 
 const OPTION_GROUPS = Object.freeze({
+  // Active Fires intensity filter (HAL-676). `minFrp` is whole megawatts on
+  // the codec side; the panel's log slider rounds to it. Both default to
+  // "show everything": many of the strongest fires are rated low confidence.
+  // The bounds and modes mirror MIN_FRP_MW_MAX / FIRMS_CONFIDENCE_MODES in
+  // firmsIntensity.js (pinned by layerState.test); spelled out here because
+  // this file runs in isolation in the token-ledger tests.
+  'local-firms': Object.freeze([
+    boundedIntegerOption('minFrp', 'f', 0, { min: 0, max: 10000 }),
+    enumOption('confidence', 'c', 'all', ['all', 'nominal', 'high'], {
+      all: 'a',
+      nominal: 'n',
+      high: 'h',
+    }),
+  ]),
   traffic: Object.freeze([
     enumOption('roadMode', 'r', null, ['tomtom', 'osm', 'hybrid'], {
       tomtom: 't',
@@ -591,7 +605,7 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     disposition: 'enabled-only',
   }),
   Object.freeze({ id: 'bikeshare', token: 'b', disposition: 'enabled-only' }),
-  Object.freeze({ id: 'bitchat', token: '7', disposition: 'enabled-only' }),
+  Object.freeze({ id: 'bitchat', token: '92', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'cctv',
     token: 'c',
@@ -599,6 +613,11 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     optionOwner: 'cctv',
   }),
   Object.freeze({ id: 'directions', token: 'n', disposition: 'enabled-only' }),
+  Object.freeze({
+    id: 'drone-airspace',
+    token: '8',
+    disposition: 'enabled-only',
+  }),
   Object.freeze({ id: 'earthquakes', token: 'e', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'fire-perimeters',
@@ -613,7 +632,7 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
   }),
   Object.freeze({
     id: 'flood-vigilance',
-    token: '6',
+    token: '91',
     disposition: 'enabled-only',
   }),
   Object.freeze({
@@ -627,7 +646,12 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     token: 'd',
     disposition: 'enabled-only',
   }),
-  Object.freeze({ id: 'local-firms', token: 'w', disposition: 'enabled-only' }),
+  Object.freeze({
+    id: 'local-firms',
+    token: 'w',
+    disposition: 'enabled+options',
+    optionOwner: 'local-firms',
+  }),
   Object.freeze({
     id: 'military',
     token: 'm',
@@ -644,7 +668,11 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     token: 'i',
     disposition: 'enabled-only',
   }),
-  Object.freeze({ id: 'news-events', token: '8', disposition: 'enabled-only' }),
+  Object.freeze({
+    id: 'news-events',
+    token: '93',
+    disposition: 'enabled-only',
+  }),
   Object.freeze({
     id: 'radio',
     token: 'r',
@@ -663,11 +691,18 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
     disposition: 'enabled-only',
   }),
   Object.freeze({
+    id: 's2-ghostmaps',
+    token: '5',
+    disposition: 'enabled-only',
+  }),
+  Object.freeze({
     id: 'satellites',
     token: 's',
     disposition: 'enabled+options',
     optionOwner: 'satellites',
   }),
+  Object.freeze({ id: 'sea-marks', token: '6', disposition: 'enabled-only' }),
+  Object.freeze({ id: 'ski-pistes', token: '7', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'street-level',
     token: '0',
@@ -688,7 +723,7 @@ export const LAYER_STATE_REGISTRY = Object.freeze([
   Object.freeze({ id: 'transit', token: 'j', disposition: 'enabled-only' }),
   Object.freeze({
     id: 'transit-network',
-    token: '5',
+    token: '90',
     disposition: 'enabled-only',
   }),
   Object.freeze({
@@ -751,6 +786,12 @@ function allocationRank(token) {
   return first < 0 || second < 0 ? Infinity : 10 + first * 36 + second;
 }
 
+/**
+ * The roolio fork owns the 90-9z tokens, so its layers never race upstream's
+ * sequential allocation (which reaches them only after 300+ more layers).
+ */
+const FORK_LAYER_STATE_TOKEN_PATTERN = /^9[0-9a-z]$/;
+
 /** Check a proposed ledger against the published merge-time base. */
 export function validateLayerStateAllocations(
   baseReservations,
@@ -765,7 +806,11 @@ export function validateLayerStateAllocations(
     }
   }
   const newlyReserved = Object.entries(reservations)
-    .filter(([id]) => !Object.hasOwn(baseReservations, id))
+    .filter(
+      ([id, token]) =>
+        !Object.hasOwn(baseReservations, id) &&
+        !FORK_LAYER_STATE_TOKEN_PATTERN.test(token),
+    )
     .sort((left, right) => allocationRank(left[1]) - allocationRank(right[1]));
   const occupied = { ...baseReservations };
   for (const [id, token] of newlyReserved) {
