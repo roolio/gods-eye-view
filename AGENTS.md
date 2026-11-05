@@ -70,12 +70,10 @@ git push origin main
   Leurs conflits se règlent presque toujours en gardant les deux côtés.
 - Écris le changelog dans un fragment `changelog.d/<slug>.md`, jamais dans
   `CHANGELOG.md`.
-- **Tokens de couche** : une nouvelle couche reçoit un token via
-  `npm run layer-token:next -- <layer-id>`. L'amont attribue les mêmes tokens
-  dans l'ordre. Si une synchronisation apporte une couche amont qui a pris
-  notre token, garde le token amont, retire seulement l'entrée de notre couche,
-  relance la commande et mets à jour le nombre de couches attendu dans les
-  tests. La procédure détaillée est dans CONTRIBUTING.md (section des tokens).
+- **Tokens de couche** : une couche du fork prend un jeton de la plage réservée
+  (voir ci-dessous), jamais un jeton de `npm run layer-token:next`. Une
+  synchronisation qui ajoute des couches amont demande seulement de mettre à
+  jour le nombre de couches attendu dans les tests.
 
 ## Jetons de liens de partage
 
