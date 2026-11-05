@@ -77,6 +77,15 @@ git push origin main
   relance la commande et mets à jour le nombre de couches attendu dans les
   tests. La procédure détaillée est dans CONTRIBUTING.md (section des tokens).
 
+## Jetons de liens de partage
+
+Le fork réserve les jetons `90` à `9z` à ses propres couches, pour éviter toute
+collision avec l'amont, qui attribue `9`, puis `00`, `01`, etc. dans l'ordre.
+N'utilise donc pas `npm run layer-token:next` pour une couche du fork : prends
+le prochain jeton libre de cette plage, et ajoute-le au registre et au fichier
+`src/data/layerStateTokenReservations.json`. Ne réattribue jamais un jeton déjà
+utilisé, car les liens existants changeraient de sens.
+
 ## Proposer une feature à l'amont (optionnel)
 
 Si une feature mérite d'être proposée à l'amont, ne réutilise pas la branche

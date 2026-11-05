@@ -2,6 +2,7 @@ import { createUsgsEarthquakeSource } from '../layers/earthquakes/source.js';
 import { createEcccAirQualitySource } from '../layers/airQuality/source.js';
 import { createWfigsPerimeterSource } from '../layers/perimeters/source.js';
 import { createGdeltNewsEventsSource } from '../layers/newsEvents/source.js';
+import { createDroneAirspaceSource } from '../layers/droneAirspace/source.js';
 import { createBundledCableSource } from '../layers/submarineCables/bundledSource.js';
 import { createBitchatSource } from '../layers/bitchat/source.js';
 import { createAdsbGnssSource } from '../layers/gnss/source.js';
@@ -15,6 +16,7 @@ export function createReferenceSources() {
     'air-quality': createEcccAirQualitySource(),
     'fire-perimeters': createWfigsPerimeterSource(),
     'news-events': createGdeltNewsEventsSource(),
+    'drone-airspace': createDroneAirspaceSource(),
     cables: createBundledCableSource(),
     'gnss-integrity': createAdsbGnssSource(),
     'transit-network': createBundledTransitNetworkSource(),
