@@ -165,7 +165,6 @@ test('pointer input, camera holds and the stock clicks go through the one dispat
       // Fork: our layers still bind their own until they move to inputFor().
       [
         'src/render/cesium/input.js',
-        'src/app/layers/bitchat.js',
         'src/app/layers/floodVigilance.js',
         'src/app/layers/newsEvents.js',
       ],

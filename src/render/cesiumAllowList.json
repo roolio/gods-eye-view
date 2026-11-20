@@ -1,8 +1,6 @@
 [
-  "src/app/layers/bitchat.js",
   "src/app/layers/floodVigilance.js",
   "src/app/layers/newsEvents.js",
-  "src/layers/bitchat/index.js",
   "src/layers/floodVigilance/index.js",
   "src/layers/floodVigilance/scene.js",
   "src/layers/floodVigilance/stations.js",

@@ -145,6 +145,9 @@ const DRAW_FROM_CALLER = new Set([
   // The application's tools (scene director, annotations, embed views,
   // Import): they draw, fly and take clicks through the ports.
   './application/tools',
+  // Fork: its cells and outlines draw through `drawOf`; it takes clicks
+  // through the dispatcher and reads the eye through the camera port.
+  './layers/bitchat',
 ]);
 
 /**
