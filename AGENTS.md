@@ -75,6 +75,17 @@ git push origin main
   synchronisation qui ajoute des couches amont demande seulement de mettre à
   jour le nombre de couches attendu dans les tests.
 
+## Couches du fork et contrat renderer de l'amont
+
+Depuis novembre 2026, l'amont interdit l'accès direct à Cesium hors de
+`src/render/cesium/` : ses tests vérifient la liste `src/render/cesiumAllowList.json`,
+le dispatcher d'entrées unique (`inputFor`) et le service de hauteurs
+(`heightsOf`). Nos couches bitchat, flood-vigilance, news-events et
+transit-network n'y sont pas encore portées. Elles figurent donc sur cette liste
+et dans les exceptions de `src/data/inputOwnership.test.mjs` et
+`src/queries/heights.test.mjs`. Une nouvelle couche du fork doit passer par les
+ports du renderer (`src/render/rendererOf.js`) plutôt que d'allonger ces listes.
+
 ## Jetons de liens de partage
 
 Le fork réserve les jetons `90` à `9z` à ses propres couches, pour éviter toute
