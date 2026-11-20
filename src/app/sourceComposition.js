@@ -51,7 +51,10 @@ export const CATALOG_SOURCE_CONTRACTS = Object.freeze({
   'gnss-integrity': contract(['gnss-integrity'], ['getSnapshot']),
   bitchat: contract(['bitchat'], ['getSnapshot', 'getMessages']),
   's2-ghostmaps': contract(['s2-ghostmaps'], ['getCatalog', 'getFile']),
+  shipwrecks: contract(['shipwrecks'], ['getSnapshot']),
   'drone-airspace': contract(['drone-airspace'], ['getSnapshot']),
+  news: contract(['news'], ['getHotspots', 'getFeed', 'getOutline']),
+  'wildlife-sightings': contract(['wildlife-sightings'], ['getSnapshot']),
   cables: contract(['telegeography-submarine-cables'], ['fetch']),
   transit: contract(['transit'], ['requestSnapshot', 'getHistory']),
   'transit-network': contract(['transit-network'], ['fetch']),
@@ -59,6 +62,7 @@ export const CATALOG_SOURCE_CONTRACTS = Object.freeze({
     ['flood-vigilance'],
     ['getSections', 'getStations'],
   ),
+  rail: contract(['rail'], ['requestSnapshot', 'getFeeds']),
 });
 
 /** An omitted provider is unavailable, never an authoritative empty dataset. */

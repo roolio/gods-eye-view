@@ -11,6 +11,25 @@ import {
 } from './labels.js';
 import { createTransitScene } from './scene.js';
 
+/** The shared cable surface helpers name a clamp target; the scene here wants Cesium's. */
+const CLASSIFICATION_BY_CLAMP = {
+  tiles: Cesium.ClassificationType.CESIUM_3D_TILE,
+  terrain: Cesium.ClassificationType.TERRAIN,
+  both: Cesium.ClassificationType.BOTH,
+};
+const surfaceForStack = (activeId) =>
+  CLASSIFICATION_BY_CLAMP[cableClassificationTypeForStack(activeId)];
+/** Without a bound renderer, read the globe the way the helper used to. */
+function surfaceForScene(host) {
+  const clamp = cableClassificationTypeForScene(host);
+  const shown = host?.scene?.globe?.show;
+  if (clamp === 'both' && typeof shown === 'boolean')
+    return shown
+      ? Cesium.ClassificationType.TERRAIN
+      : Cesium.ClassificationType.CESIUM_3D_TILE;
+  return CLASSIFICATION_BY_CLAMP[clamp];
+}
+
 export const TRANSIT_NETWORK_LAYER_ID = 'transit-network';
 
 const PROBE_INTERVAL_MS = 250;
@@ -192,12 +211,12 @@ export function createTransitNetworkLayer({
 
     init(v) {
       viewer = v;
-      classificationType = cableClassificationTypeForScene(v?.scene);
+      classificationType = surfaceForScene(v);
       if (!onStackChanged && mapStackEventTarget?.addEventListener) {
         onStackChanged = (event) => {
           classificationType = event?.detail?.activeId
-            ? cableClassificationTypeForStack(event.detail.activeId)
-            : cableClassificationTypeForScene(viewer?.scene);
+            ? surfaceForStack(event.detail.activeId)
+            : surfaceForScene(viewer);
           if (!scene) return;
           scene.setSurface(classificationType);
           tilesWereLoaded = false;

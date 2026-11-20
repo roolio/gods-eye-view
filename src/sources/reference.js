@@ -8,6 +8,7 @@ import { createBitchatSource } from '../layers/bitchat/source.js';
 import { createAdsbGnssSource } from '../layers/gnss/source.js';
 import { createBundledTransitNetworkSource } from '../layers/transitNetwork/source.js';
 import { createFloodVigilanceSource } from '../layers/floodVigilance/source.js';
+import { createWildlifeSightingsSource } from '../layers/wildlifeSightings/source.js';
 
 /** Construct the existing reference feeds independently of application setup. */
 export function createReferenceSources() {
@@ -17,6 +18,7 @@ export function createReferenceSources() {
     'fire-perimeters': createWfigsPerimeterSource(),
     'news-events': createGdeltNewsEventsSource(),
     'drone-airspace': createDroneAirspaceSource(),
+    'wildlife-sightings': createWildlifeSightingsSource(),
     cables: createBundledCableSource(),
     'gnss-integrity': createAdsbGnssSource(),
     'transit-network': createBundledTransitNetworkSource(),
