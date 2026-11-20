@@ -1,9 +1,14 @@
-import * as Cesium from 'cesium';
+import { fromDegrees } from '../../geo/ellipsoid.js';
 import { formatNumber } from '../../i18n/index.js';
+import { heightsOf } from '../../queries/heights.js';
+import { cssColor } from '../../render/color.js';
+import { drawOf, findGlobe } from '../../render/rendererOf.js';
 import { FLOOD_VIGILANCE_LAYER_ID, stationIsStale } from './records.js';
 import { stationPointStyle } from './style.js';
 
 export const STATION_PICK_PREFIX = `${FLOOD_VIGILANCE_LAYER_ID}:station:`;
+/** Draw set ids start with this: `<prefix>:<n>`. */
+export const STATION_SET_PREFIX = `${FLOOD_VIGILANCE_LAYER_ID}:stations`;
 export const STATION_LABEL_SOURCE_ID = 'flood-vigilance-stations';
 /** Stations show only below this camera height; above it, sections alone. */
 export const STATIONS_MAX_HEIGHT_M = 150_000;
@@ -13,6 +18,7 @@ export const STATION_LABEL_COHORT_LIMIT = 32;
 /** Half the query box around the view centre: 3° by 2°, at most 12 tiles. */
 const QUERY_HALF_LON = 1.5;
 const QUERY_HALF_LAT = 1;
+let scenes = 0;
 const TREND_ARROWS = Object.freeze({
   rising: '↑',
   falling: '↓',
@@ -62,36 +68,48 @@ function labelPriority(station) {
 
 /**
  * Dots for the gauging stations of the current view, and their height labels.
- * @param {Cesium.Viewer} viewer
+ * The dots are one point draw set; each item is
+ * `<STATION_PICK_PREFIX><station id>`, its `meta` naming the station. A dot
+ * stands 2 m above the loaded terrain where the globe is shown, else 2 m
+ * above the ellipsoid, and draws over every surface.
+ * @param {object} viewer The scene object the renderer draws.
  * @param {import('./records.js').StationReading[]} stations
  * @param {number} nowMs
  */
 export function createStationScene(viewer, stations, nowMs) {
-  const scene = viewer.scene;
-  const points = scene.primitives.add(new Cesium.PointPrimitiveCollection());
-  const carto = new Cesium.Cartographic();
+  const points = drawOf(viewer).points({
+    id: `${STATION_SET_PREFIX}:${++scenes}`,
+  });
+  const onGlobe = findGlobe(viewer)?.isGlobeVisible?.() === true;
+  const heights = onGlobe ? heightsOf(viewer) : null;
+  const items = [];
   const records = stations.map((station) => {
-    Cesium.Cartographic.fromDegrees(station.lon, station.lat, 0, carto);
-    const ground = scene.globe?.show ? scene.globe.getHeight?.(carto) : null;
-    const position = Cesium.Cartesian3.fromDegrees(
+    const ground = heights?.now(
+      { lon: station.lon, lat: station.lat },
+      { against: 'terrain' },
+    );
+    const position = fromDegrees(
       station.lon,
       station.lat,
       (Number.isFinite(ground) ? ground : 0) + 2,
     );
     const stale = stationIsStale(station, nowMs);
     const style = stationPointStyle(stale);
-    points.add({
+    items.push({
       id: `${STATION_PICK_PREFIX}${station.id}`,
-      position,
+      pos: position,
+      height: 'absolute',
       pixelSize: style.pixelSize,
-      color: Cesium.Color.fromCssColorString(style.fill),
-      outlineColor: Cesium.Color.fromCssColorString(style.outline),
+      color: cssColor(style.fill),
+      outlineColor: cssColor(style.outline),
       outlineWidth: 2,
+      meta: { kind: 'station', id: station.id },
       // Gauges sit on river banks, often below photoreal or terrain surfaces.
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      disableDepthTest: Number.POSITIVE_INFINITY,
     });
     return { station, position, stale };
   });
+  points.set(items);
   let disposed = false;
   return {
     records,
@@ -123,15 +141,18 @@ export function createStationScene(viewer, stations, nowMs) {
           placement: 'above',
         }));
     },
+    setId: points.id,
     setVisible(visible) {
       points.show = visible;
+    },
+    /** Whether the dots are drawn now. */
+    get visible() {
+      return points.show;
     },
     dispose() {
       if (disposed) return;
       disposed = true;
-      if (viewer.isDestroyed?.()) return;
-      if (!scene.primitives.isDestroyed?.()) scene.primitives.remove(points);
-      else if (!points.isDestroyed?.()) points.destroy();
+      points.dispose();
     },
   };
 }

@@ -1,7 +1,1 @@
-[
-  "src/app/layers/floodVigilance.js",
-  "src/layers/floodVigilance/index.js",
-  "src/layers/floodVigilance/scene.js",
-  "src/layers/floodVigilance/stations.js",
-  "src/layers/floodVigilance/testFixtures.mjs"
-]
+[]

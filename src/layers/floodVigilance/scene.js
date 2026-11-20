@@ -1,71 +1,77 @@
-import * as Cesium from 'cesium';
+import { fromDegrees } from '../../geo/ellipsoid.js';
+import { hexColor } from '../../render/color.js';
+import { drawOf } from '../../render/rendererOf.js';
 import { FLOOD_VIGILANCE_LAYER_ID } from './records.js';
 import { sectionLineStyle } from './style.js';
 
 export const SECTION_PICK_PREFIX = `${FLOOD_VIGILANCE_LAYER_ID}:section:`;
+/** Draw set ids start with this, one set per level: `<prefix>:<n>:level-<level>`. */
+export const SECTION_SET_PREFIX = `${FLOOD_VIGILANCE_LAYER_ID}:sections`;
+
+let scenes = 0;
+
+/** Packed ECEF `x, y, z` of a `[lon, lat, lon, lat, ...]` path in degrees. */
+function pathPositions(path) {
+  const positions = new Float64Array((path.length / 2) * 3);
+  for (let i = 0, j = 0; i < path.length; i += 2, j += 3) {
+    const p = fromDegrees(path[i], path[i + 1]);
+    positions[j] = p.x;
+    positions[j + 1] = p.y;
+    positions[j + 2] = p.z;
+  }
+  return positions;
+}
 
 /**
- * Ground polylines for the river sections, one primitive per level. Add order
- * is draw order, so red is drawn last and on top.
- * @param {Cesium.Viewer} viewer
+ * Draped lines for the river sections, one draw set per level. Sets of one
+ * draw order stack in the order they are made: green first, so red is drawn
+ * last and on top.
+ * Each path is an item `<SECTION_PICK_PREFIX><section id>:<path index>` whose
+ * `meta` names its section.
+ * @param {object} viewer The scene object the renderer draws.
  * @param {import('./records.js').FloodSection[]} sections
- * @param {{classificationType: Cesium.ClassificationType}} options
- * @returns {{setSurface(type: Cesium.ClassificationType): void, dispose(): void}}
+ * @param {{clampTo: 'tiles'|'terrain'|'both'}} options
+ * @returns {{setIds: Set<string>, setSurface(clampTo: 'tiles'|'terrain'|'both'): void, dispose(): void}}
  */
-export function createSectionScene(viewer, sections, { classificationType }) {
-  const scene = viewer.scene;
-  const collection = scene.groundPrimitives.add(
-    new Cesium.PrimitiveCollection(),
-  );
-  const primitives = [];
+export function createSectionScene(viewer, sections, { clampTo }) {
+  const draw = drawOf(viewer);
+  const prefix = `${SECTION_SET_PREFIX}:${++scenes}`;
+  const sets = [];
   for (const level of [1, 2, 3, 4]) {
     const style = sectionLineStyle(level);
-    const color = Cesium.Color.fromCssColorString(style.color).withAlpha(
-      style.alpha,
-    );
-    const instances = [];
+    const color = hexColor(style.color, style.alpha);
+    const items = [];
     for (const section of sections) {
       if (section.level !== level) continue;
-      for (const path of section.paths) {
-        instances.push(
-          new Cesium.GeometryInstance({
-            id: `${SECTION_PICK_PREFIX}${section.id}`,
-            geometry: new Cesium.GroundPolylineGeometry({
-              positions: Cesium.Cartesian3.fromDegreesArray(path),
-              width: style.widthPx,
-            }),
-            attributes: {
-              color: Cesium.ColorGeometryInstanceAttribute.fromColor(color),
-            },
-          }),
-        );
-      }
+      section.paths.forEach((path, index) => {
+        items.push({
+          id: `${SECTION_PICK_PREFIX}${section.id}:${index}`,
+          positions: pathPositions(path),
+          widthPx: style.widthPx,
+          mode: 'draped',
+          style: { kind: 'solid', color },
+          meta: { kind: 'section', id: section.id },
+        });
+      });
     }
-    if (!instances.length) continue;
-    primitives.push(
-      collection.add(
-        new Cesium.GroundPolylinePrimitive({
-          geometryInstances: instances,
-          appearance: new Cesium.PolylineColorAppearance({
-            translucent: style.alpha < 1,
-          }),
-          classificationType,
-        }),
-      ),
-    );
+    if (!items.length) continue;
+    const set = draw.lines({
+      id: `${prefix}:level-${level}`,
+      clampTo,
+    });
+    set.set(items);
+    sets.push(set);
   }
   let disposed = false;
   return {
-    setSurface(type) {
-      for (const primitive of primitives) primitive.classificationType = type;
+    setIds: new Set(sets.map((set) => set.id)),
+    setSurface(next) {
+      for (const set of sets) set.setOptions({ clampTo: next });
     },
     dispose() {
       if (disposed) return;
       disposed = true;
-      if (viewer.isDestroyed?.()) return;
-      if (!scene.groundPrimitives.isDestroyed?.())
-        scene.groundPrimitives.remove(collection);
-      else if (!collection.isDestroyed?.()) collection.destroy();
+      for (const set of sets) set.dispose();
     },
   };
 }
