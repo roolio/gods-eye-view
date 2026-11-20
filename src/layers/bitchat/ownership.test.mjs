@@ -1,27 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as Cesium from 'cesium';
 import { createBitchatLayer } from './index.js';
-Cesium.ContextLimits._maximumAliasedLineWidth = 1;
 import { layerFeedState } from '../../data/feedState.js';
+import { claimPointer, releasePointer } from '../../data/inputOwnership.js';
+import { fromDegrees } from '../../geo/ellipsoid.js';
+import { fakeInputUnderLabel } from '../../input/testDoubles.mjs';
+import { hslColor } from '../../render/color.js';
+import { fakeCameraPort } from '../../testSupport/fakeCameraPort.mjs';
+import { bindFakeDraw } from '../../testSupport/fakeDrawPort.mjs';
+
+/**
+ * A viewer double with a fake draw port and camera bound, as the application
+ * binds its renderer. Its scene's `pick` and camera's `pickEllipsoid` answer
+ * a click's top hit and surface point.
+ */
+function scene() {
+  const viewer = { camera: {}, scene: {} };
+  const camera = fakeCameraPort({ pose: { height: 3000000 } });
+  const { draw } = bindFakeDraw(viewer, { camera: camera.port });
+  return { viewer, draw };
+}
 
 function harness(getSnapshot) {
-  const resources = [];
-  const viewer = {
-    camera: { positionCartographic: { height: 3000000 } },
-    scene: {
-      groundPrimitives: {
-        add(value) {
-          resources.push(value);
-          return value;
-        },
-        remove(value) {
-          resources.splice(resources.indexOf(value), 1);
-          value.destroy();
-        },
-      },
-    },
-  };
+  const { viewer, draw } = scene();
   const layer = createBitchatLayer({
     source: {
       getSnapshot,
@@ -29,7 +30,13 @@ function harness(getSnapshot) {
     },
   });
   layer.init(viewer);
-  return { layer, viewer, resources };
+  return {
+    layer,
+    viewer,
+    draw,
+    fills: draw.find('bitchat:'),
+    outlines: draw.find('bitchat-coarse:'),
+  };
 }
 const snapshot = {
   status: 'live',
@@ -45,27 +52,82 @@ test('each instance owns batched rectangles, outlines and cleanup', async () => 
     return snapshot;
   });
   const b = harness(async () => snapshot);
+  assert.notEqual(a.fills.spec.id, b.fills.spec.id);
+  assert.equal(a.fills.kind, 'shapes');
+  assert.equal(a.outlines.kind, 'lines');
+  // Ground rectangles leave picks to the layers above them.
+  assert.equal(a.fills.spec.pickable, false);
+  assert.equal(a.outlines.spec.pickable, false);
+  assert.equal(a.fills.spec.clampTo, 'both');
+  assert.equal(a.fills.show, false);
   assert.equal(await a.layer.update(), false);
   a.layer.enable();
+  assert.equal(a.fills.show, true);
+  assert.equal(a.outlines.show, true);
   assert.equal(await a.layer.update(), true);
   assert.deepEqual(calls, [{ precision: 3 }]);
-  const fill = a.resources[0].get(0);
-  assert.equal(fill.geometryInstances.length, 1);
-  assert.equal(fill.geometryInstances[0].id, 'bitchat:u09');
-  assert.equal(
-    fill.geometryInstances[0].geometry instanceof Cesium.RectangleGeometry,
-    true,
-  );
-  assert.equal(a.resources[1].get(0).geometryInstances.length, 1);
-  assert.equal(b.resources[0].length, 0);
+  assert.equal(a.fills.items.size, 1);
+  const fill = a.fills.items.get('bitchat:u09');
+  // The geohash cell's own bounds, draped on terrain and tiles.
+  assert.deepEqual(fill.geometry, {
+    kind: 'rectangle',
+    rect: { west: 1.40625, south: 47.8125, east: 2.8125, north: 49.21875 },
+  });
+  assert.equal(fill.height, 'clampGround');
+  assert.equal(fill.lit, false);
+  // The only cell is the busiest: full intensity, red at 0.7 alpha.
+  assert.deepEqual(fill.fill, hslColor(0, 0.9, 0.55, 0.7));
+  assert.equal(a.outlines.items.size, 1);
+  const outline = a.outlines.items.get('bitchat-coarse:u0');
+  assert.equal(outline.mode, 'draped');
+  assert.equal(outline.widthPx, 1);
+  assert.deepEqual(outline.style, { kind: 'solid', color: [1, 1, 1, 0.25] });
+  assert.equal(outline.positions.length, 5);
+  assert.deepEqual(outline.positions[0], outline.positions[4]);
+  assert.equal(b.fills.items.size, 0);
   assert.equal(layerFeedState(a.layer.getStats()), 'nominal');
   a.layer.disable();
-  assert.equal(a.resources[0].length, 0);
-  assert.equal(a.resources[0].show, false);
+  assert.equal(a.fills.items.size, 0);
+  assert.equal(a.outlines.items.size, 0);
+  assert.equal(a.fills.show, false);
   a.layer.destroy();
   b.layer.destroy();
-  assert.equal(a.resources.length, 0);
-  assert.equal(fill.isDestroyed(), true);
+  assert.equal(a.fills.disposed, true);
+  assert.equal(a.outlines.disposed, true);
+  assert.equal(b.fills.disposed, true);
+  assert.equal(b.outlines.disposed, true);
+});
+
+test('colour and alpha follow log activity relative to the busiest cell', async () => {
+  const h = harness(async () => ({
+    ...snapshot,
+    cells: [
+      { geohash: 'u09', people: 3, messages: 1, lastAt: 1000 },
+      { geohash: 'u0d', people: 15, messages: 9, lastAt: 1000 },
+    ],
+  }));
+  h.layer.enable();
+  await h.layer.update();
+  const intensity = Math.log1p(3) / Math.log1p(15);
+  assert.deepEqual(
+    h.fills.items.get('bitchat:u09').fill,
+    hslColor(0.45 - 0.45 * intensity, 0.9, 0.55, 0.3 + 0.4 * intensity),
+  );
+  assert.deepEqual(
+    h.fills.items.get('bitchat:u0d').fill,
+    hslColor(0, 0.9, 0.55, 0.7),
+  );
+  h.layer.destroy();
+});
+
+test('a scene with no renderer cannot draw the layer', () => {
+  const layer = createBitchatLayer({
+    source: {
+      getSnapshot: async () => snapshot,
+      getMessages: async () => ({ people: 0, messages: [] }),
+    },
+  });
+  assert.throws(() => layer.init({}), /no renderer to draw with/);
 });
 
 test('disable aborts acquisition and late data cannot repopulate the display', async () => {
@@ -82,7 +144,8 @@ test('disable aborts acquisition and late data cannot repopulate the display', a
   assert.equal(signal.aborted, true);
   resolve(snapshot);
   assert.equal(await request, false);
-  assert.equal(h.resources[0].length, 0);
+  assert.equal(h.fills.items.size, 0);
+  assert.equal(h.outlines.items.size, 0);
   h.layer.destroy();
 });
 
@@ -98,18 +161,19 @@ test('warming and degraded coverage report through feed health and failure clear
   status = 'degraded';
   await h.layer.update();
   assert.equal(layerFeedState(h.layer.getStats()), 'degraded');
+  assert.equal(h.fills.items.size, 1);
   status = 'failure';
   await h.layer.update();
   assert.equal(layerFeedState(h.layer.getStats()), 'unavailable');
-  assert.equal(h.resources[0].length, 0);
+  assert.equal(h.fills.items.size, 0);
+  assert.equal(h.outlines.items.size, 0);
   h.layer.destroy();
 });
 
-test('ground selection respects contacts and tools, refreshes and closes with privacy or lifecycle changes', async () => {
+test('ground selection respects contacts, tools and painted labels, refreshes and closes with privacy or lifecycle changes', async () => {
   const picking = await import('../../data/pickRegistry.js');
-  let click,
-    picked = null,
-    free = true;
+  let picked = null;
+  let ground = fromDegrees(2.1, 48.5);
   let nextSnapshot = snapshot;
   let data = {
     people: 12,
@@ -117,11 +181,10 @@ test('ground selection respects contacts and tools, refreshes and closes with pr
   };
   const entries = new Map(),
     visible = new Map();
-  const h = harness(async () => snapshot);
-  h.layer.destroy();
-  h.viewer.camera.pickEllipsoid = () =>
-    Cesium.Cartesian3.fromDegrees(2.1, 48.5);
-  h.viewer.scene.pick = () => picked;
+  const { viewer } = scene();
+  viewer.scene.pick = () => picked;
+  viewer.camera.pickEllipsoid = () => ground;
+  const input = fakeInputUnderLabel(viewer);
   const layer = createBitchatLayer({
     source: {
       getSnapshot: async () => nextSnapshot,
@@ -129,7 +192,7 @@ test('ground selection respects contacts and tools, refreshes and closes with pr
     },
     now: () => 1800000060000,
     picking,
-    pointer: { isPointerFree: () => free },
+    inputFor: () => input.input,
     overlayHost: {
       setEntries(id, rows) {
         entries.set(id, rows);
@@ -141,36 +204,46 @@ test('ground selection respects contacts and tools, refreshes and closes with pr
         entries.delete(id);
       },
     },
-    screenSpaceEventHandlerFactory: () => ({
-      setInputAction(action) {
-        click = action;
-      },
-      destroy() {},
-    }),
   });
   const flush = () => new Promise((resolve) => setImmediate(resolve));
-  layer.init(h.viewer);
+  const click = () => input.click({ x: 10, y: 10 });
+  // The painted label's own overlay handler is already subscribed.
+  const baseline = input.input.subscriberCount();
+  layer.init(viewer);
+  assert.equal(input.input.subscriberCount(), baseline);
   layer.enable();
+  assert.equal(input.input.subscriberCount(), baseline + 1);
   await layer.update();
+  // A contact another layer owns takes the click.
   picking.registerPickOwner('test-contact', (id) => id === 'flight:123');
   picked = { id: 'flight:123' };
-  click({ position: { x: 10, y: 10 } });
+  click();
   await flush();
   assert.equal(entries.has('bitchat-card'), false);
   picked = null;
-  free = false;
-  click({ position: { x: 10, y: 10 } });
+  // A tool holding the pointer keeps ambient selection off.
+  const lease = claimPointer('test-tool');
+  click();
   await flush();
   assert.equal(entries.has('bitchat-card'), false);
-  free = true;
-  click({ position: { x: 10, y: 10 } });
+  releasePointer(lease);
+  // A label painted over the map takes the click.
+  input.label.over = true;
+  click();
   await flush();
-  assert.equal(entries.get('bitchat-card')[0].title, 'BITCHAT · u09');
-  assert.deepEqual(entries.get('bitchat-card')[0].details, [
+  assert.equal(entries.has('bitchat-card'), false);
+  input.label.over = false;
+  click();
+  await flush();
+  const [card] = entries.get('bitchat-card');
+  assert.equal(card.title, 'BITCHAT · u09');
+  assert.deepEqual(card.details, [
     '12 people · 5 messages',
     '<img onerror=alert(1)> · 1 minute ago',
     'Public messages from Bitchat location channels, shown live and not stored.',
   ]);
+  // The card sits at the cell's centre.
+  assert.deepEqual(card.position, fromDegrees(2.109375, 48.515625));
   data = { people: 13, messages: [{ text: 'fresh', at: 1800000060 }] };
   await layer.update();
   assert.equal(
@@ -181,7 +254,7 @@ test('ground selection respects contacts and tools, refreshes and closes with pr
   await layer.update();
   assert.equal(entries.has('bitchat-card'), false);
   data = { people: 12, messages: [] };
-  click({ position: { x: 10, y: 10 } });
+  click();
   await flush();
   assert.equal(entries.get('bitchat-card')[0].title, 'BITCHAT · u09');
   nextSnapshot = { ...snapshot, cells: [] };
@@ -189,22 +262,29 @@ test('ground selection respects contacts and tools, refreshes and closes with pr
   assert.equal(entries.has('bitchat-card'), false);
   nextSnapshot = snapshot;
   await layer.update();
-  click({ position: { x: 10, y: 10 } });
+  click();
   await flush();
-  h.viewer.camera.pickEllipsoid = () => Cesium.Cartesian3.fromDegrees(-90, 0);
-  click({ position: { x: 10, y: 10 } });
+  // A click outside every cell closes the card.
+  ground = fromDegrees(-90, 0);
+  click();
   assert.equal(entries.has('bitchat-card'), false);
-  h.viewer.camera.pickEllipsoid = () =>
-    Cesium.Cartesian3.fromDegrees(2.1, 48.5);
-  click({ position: { x: 10, y: 10 } });
+  ground = fromDegrees(2.1, 48.5);
+  click();
   await flush();
   assert.equal(entries.get('bitchat-card')[0].title, 'BITCHAT · u09');
   layer.disable();
+  assert.equal(input.input.subscriberCount(), baseline);
   assert.equal(visible.get('bitchat-card'), false);
   assert.equal(entries.has('bitchat-card'), false);
+  // Bitchat never claims picks of its own.
   assert.equal(picking.findPickOwner('bitchat:u09'), null);
+  // Disabled, clicks do nothing.
+  click();
+  await flush();
+  assert.equal(entries.has('bitchat-card'), false);
   layer.destroy();
   picking.unregisterPickOwner('test-contact');
+  input.destroy();
 });
 
 test('cards cap message excerpts and keep public content as literal text', async () => {
