@@ -121,6 +121,10 @@ const DRAW_FROM_CALLER = new Set([
   // Its pins, footprints and outlines draw through `drawOf`; its horizon
   // cull reads the camera and frame ports.
   './layers/ghostmaps',
+  // Fork: its points draw through `drawOf`; it takes clicks through the
+  // dispatcher, reads its ground through `heightsOf` and the globe port,
+  // and culls the horizon through the camera and frame ports.
+  './layers/news-events',
   // Its moving and still vehicle icons draw through `drawOf`; it projects,
   // culls, follows and samples floors through the ports.
   './layers/transit',
@@ -145,6 +149,9 @@ const DRAW_FROM_CALLER = new Set([
   // The application's tools (scene director, annotations, embed views,
   // Import): they draw, fly and take clicks through the ports.
   './application/tools',
+  // Fork: its cells and outlines draw through `drawOf`; it takes clicks
+  // through the dispatcher and reads the eye through the camera port.
+  './layers/bitchat',
 ]);
 
 /**

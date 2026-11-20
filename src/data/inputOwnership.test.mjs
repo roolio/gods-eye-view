@@ -162,13 +162,7 @@ test('pointer input, camera holds and the stock clicks go through the one dispat
       /new\s+[\w.]*ScreenSpaceEventHandler\(/,
       'binds its own ScreenSpaceEventHandler',
       // The Cesium renderer's input port, the renderer's one handler.
-      // Fork: our layers still bind their own until they move to inputFor().
-      [
-        'src/render/cesium/input.js',
-        'src/app/layers/bitchat.js',
-        'src/app/layers/floodVigilance.js',
-        'src/app/layers/newsEvents.js',
-      ],
+      ['src/render/cesium/input.js'],
     ],
     [
       /\.enableInputs\s*=(?!=)/,

@@ -1,4 +1,8 @@
-import * as Cesium from 'cesium';
+import { fromDegrees, fromDegreesInto } from '../../geo/ellipsoid.js';
+import { frustumPlanes, sphereOutside } from '../../geo/frustum.js';
+import { distance } from '../../geo/vector.js';
+import { heightsOf } from '../../queries/heights.js';
+import { drawOf, findGlobe } from '../../render/rendererOf.js';
 import { createStationOverlayEntry } from './labels.js';
 import {
   STATION_FILL,
@@ -8,16 +12,29 @@ import {
 } from './style.js';
 
 export const HEIGHT_SAMPLES_PER_SWEEP = 24;
+export const TRACK_SET_PREFIX = 'transit-network:tracks';
+export const STATION_SET_ID = 'transit-network:stations';
 const HEIGHT_RETRY_MS = 1000;
 const STATION_ANCHOR_LIFT_M = 2;
 const STATION_DOT_MAX_DISTANCE_M = 60000;
 const RESAMPLE_RADIUS_M = 25000;
+const STATION_SCALE = Object.freeze({
+  near: 1000,
+  nearValue: 1,
+  far: 40000,
+  farValue: 0.5,
+});
+const STATION_DISPLAY_RANGE = Object.freeze([0, STATION_DOT_MAX_DISTANCE_M]);
+
+/** @typedef {'tiles'|'terrain'|'both'} ClampTarget */
 
 /**
  * @typedef {object} StationRecord
  * @property {import('./source.js').TransitStation} station
- * @property {Cesium.Cartesian3} position Shared by the dot and its label.
- * @property {Cesium.PointPrimitive} point
+ * @property {{x: number, y: number, z: number}} position ECEF anchor shared
+ *   by the dot and its label, moved in place.
+ * @property {import('../../render/contract/draw').PointItem} point The dot's
+ *   draw-set item; re-sent when its show or height changes.
  * @property {object} entry
  * @property {boolean} resolved Surface height known for the current surface.
  * @property {boolean} resample One resample armed by a tile-load completion.
@@ -30,102 +47,93 @@ const RESAMPLE_RADIUS_M = 25000;
 /**
  * @typedef {object} TransitScene
  * @property {StationRecord[]} records
- * @property {(camera: Cesium.Camera, now: number) => {pendingVisible: boolean}} sweep
+ * @property {(pose: import('../../render/contract/camera').CameraPose, now: number) => {pendingVisible: boolean}} sweep
  *   Annotates every record, then samples at most HEIGHT_SAMPLES_PER_SWEEP
  *   heights, nearest visible first.
- * @property {(classificationType: Cesium.ClassificationType) => void} setSurface
- *   Map stack changed: reclassify the tracks in place and forget every height.
+ * @property {(clampTo: ClampTarget) => void} setSurface
+ *   Map stack changed: drape the tracks on the new surface and forget every
+ *   height.
  * @property {() => number} rearmNearby Tile loads finished: resample nearby
  *   resolved stations once. Returns how many were armed.
  * @property {() => {pendingHeights: number, samplingUnsupported: boolean}} stats
  * @property {() => void} dispose Idempotent.
  */
 
-function isPhotorealSurface(scene, classificationType) {
-  if (classificationType === Cesium.ClassificationType.CESIUM_3D_TILE)
-    return true;
-  if (classificationType === Cesium.ClassificationType.TERRAIN) return false;
-  return scene.globe?.show === false;
+/**
+ * Whether stations stand on the photoreal tiles: their dots then wait for a
+ * sampled height, since an ellipsoid anchor would sink under the buildings.
+ * @param {object} viewer
+ * @param {ClampTarget} clampTo
+ */
+function isPhotorealSurface(viewer, clampTo) {
+  if (clampTo === 'tiles') return true;
+  if (clampTo === 'terrain') return false;
+  return findGlobe(viewer)?.isGlobeVisible?.() === false;
 }
 
 /**
- * @param {Cesium.Viewer} viewer
+ * @param {object} viewer The scene object the renderer is bound to.
  * @param {import('./source.js').TransitNetwork} network
- * @param {{classificationType: Cesium.ClassificationType}} options
+ * @param {{clampTo: ClampTarget}} options
  * @returns {TransitScene}
  */
-export function createTransitScene(viewer, network, { classificationType }) {
-  const scene = viewer.scene;
-  const pickExclusionId = Object.freeze({ layer: 'transit-network' });
-  const exclude = [pickExclusionId];
+export function createTransitScene(viewer, network, { clampTo }) {
+  const draw = drawOf(viewer);
+  const heights = heightsOf(viewer);
 
-  const tracks = scene.groundPrimitives.add(new Cesium.PrimitiveCollection());
-  const trackPrimitives = [];
-  // Add order is draw order: level 0 (narrowest, best rank) goes last, on top.
+  // Made order is draw order among draped sets: level 0 (narrowest, best
+  // rank) is made last, so it draws on top.
+  const trackSets = [];
   for (let level = network.strandsByLevel.length - 1; level >= 0; level--) {
-    const instances = [];
+    const items = [];
     for (const strand of network.strandsByLevel[level]) {
-      const color = Cesium.Color.fromCssColorString(strand.line.color);
-      const width = trackWidthPx(strand.line.mode, level);
+      const widthPx = trackWidthPx(strand.line.mode, level);
       for (const path of strand.paths) {
-        instances.push(
-          new Cesium.GeometryInstance({
-            id: pickExclusionId,
-            geometry: new Cesium.GroundPolylineGeometry({
-              positions: Cesium.Cartesian3.fromDegreesArray(path),
-              width,
-            }),
-            attributes: {
-              color: Cesium.ColorGeometryInstanceAttribute.fromColor(color),
-            },
-          }),
-        );
+        const positions = [];
+        for (let i = 0; i + 1 < path.length; i += 2)
+          positions.push(fromDegrees(path[i], path[i + 1], 0));
+        items.push({
+          id: `${strand.line.id}:${level}:${items.length}`,
+          positions,
+          widthPx,
+          mode: 'draped',
+          style: { kind: 'solid', color: strand.line.color },
+        });
       }
     }
-    if (instances.length === 0) continue;
-    trackPrimitives.push(
-      tracks.add(
-        new Cesium.GroundPolylinePrimitive({
-          geometryInstances: instances,
-          appearance: new Cesium.PolylineColorAppearance(),
-          classificationType,
-        }),
-      ),
-    );
+    if (items.length === 0) continue;
+    const set = draw.lines({
+      id: `${TRACK_SET_PREFIX}:${level}`,
+      clampTo,
+      pickable: false,
+    });
+    set.set(items);
+    trackSets.push(set);
   }
 
-  let photoreal = isPhotorealSurface(scene, classificationType);
-  const points = scene.primitives.add(new Cesium.PointPrimitiveCollection());
-  const fill = Cesium.Color.fromCssColorString(STATION_FILL);
-  const displayCondition = new Cesium.DistanceDisplayCondition(
-    0,
-    STATION_DOT_MAX_DISTANCE_M,
-  );
-  const scale = new Cesium.NearFarScalar(1000, 1, 40000, 0.5);
+  let photoreal = isPhotorealSurface(viewer, clampTo);
+  const points = draw.points({ id: STATION_SET_ID, pickable: false });
   /** @type {StationRecord[]} */
   const records = network.stations.map((station) => {
-    const position = Cesium.Cartesian3.fromDegrees(
+    const position = fromDegrees(
       station.lon,
       station.lat,
       STATION_ANCHOR_LIFT_M,
     );
-    const point = points.add({
-      id: pickExclusionId,
-      position,
-      show: !photoreal,
-      pixelSize: stationPixelSize(station.lines.length),
-      color: fill,
-      outlineColor: Cesium.Color.fromCssColorString(
-        stationOutlineColor(station),
-      ),
-      outlineWidth: 2,
-      distanceDisplayCondition: displayCondition,
-      scaleByDistance: scale,
-    });
     return {
       station,
       position,
-      point,
+      point: {
+        id: station.id,
+        pos: { ...position },
+        show: !photoreal,
+        pixelSize: stationPixelSize(station.lines.length),
+        color: STATION_FILL,
+        outlineColor: stationOutlineColor(station),
+        outlineWidth: 2,
+        displayRange: STATION_DISPLAY_RANGE,
+        scaleByDistance: STATION_SCALE,
+      },
       entry: createStationOverlayEntry(station, position),
       resolved: false,
       resample: false,
@@ -135,40 +143,47 @@ export function createTransitScene(viewer, network, { classificationType }) {
       distanceM: Infinity,
     };
   });
+  points.set(records.map((record) => record.point));
 
-  const carto = new Cesium.Cartographic();
-  const sphere = new Cesium.BoundingSphere(new Cesium.Cartesian3(), 1);
+  const at = { lon: 0, lat: 0 };
+  const TERRAIN = Object.freeze({ against: 'terrain' });
   let samplingUnsupported = false;
   let disposed = false;
+  /** Dots whose item changed this sweep, re-sent in one upsert. */
+  const changed = new Set();
 
   function sampleSurfaceHeight(record) {
-    Cesium.Cartographic.fromDegrees(
-      record.station.lon,
-      record.station.lat,
-      0,
-      carto,
-    );
+    at.lon = record.station.lon;
+    at.lat = record.station.lat;
     if (!photoreal) {
-      const height = scene.globe?.getHeight?.(carto);
-      if (Number.isFinite(height)) return height;
+      const height = heights.now(at, TERRAIN);
+      if (height !== null) return height;
     }
-    if (!scene.sampleHeightSupported) return undefined;
-    try {
-      return scene.sampleHeight(carto, exclude);
-    } catch {
-      return undefined;
-    }
+    if (!heights.supported().surface) return null;
+    return heights.now(at);
   }
 
   function placeAt(record, heightM) {
-    Cesium.Cartesian3.fromDegrees(
+    fromDegreesInto(
       record.station.lon,
       record.station.lat,
       heightM,
-      Cesium.Ellipsoid.WGS84,
       record.position,
     );
-    record.point.position = record.position;
+    record.point.pos = { ...record.position };
+    changed.add(record);
+  }
+
+  function showDot(record, show) {
+    if (record.point.show === show) return;
+    record.point.show = show;
+    changed.add(record);
+  }
+
+  function flush() {
+    if (changed.size === 0 || disposed) return;
+    points.upsert([...changed].map((record) => record.point));
+    changed.clear();
   }
 
   const needsHeight = (record) => !record.resolved || record.resample;
@@ -176,21 +191,12 @@ export function createTransitScene(viewer, network, { classificationType }) {
   return {
     records,
 
-    sweep(camera, now) {
-      const cameraPosition = camera.positionWC;
-      const culling = camera.frustum.computeCullingVolume(
-        cameraPosition,
-        camera.directionWC,
-        camera.upWC,
-      );
+    sweep(pose, now) {
+      const eye = pose.position;
+      const planes = frustumPlanes(pose);
       for (const record of records) {
-        record.distanceM = Cesium.Cartesian3.distance(
-          cameraPosition,
-          record.position,
-        );
-        Cesium.Cartesian3.clone(record.position, sphere.center);
-        record.inView =
-          culling.computeVisibility(sphere) !== Cesium.Intersect.OUTSIDE;
+        record.distanceM = distance(eye, record.position);
+        record.inView = !sphereOutside(planes, record.position, 1);
       }
 
       const eligible = (record) =>
@@ -198,7 +204,7 @@ export function createTransitScene(viewer, network, { classificationType }) {
         record.distanceM <= STATION_DOT_MAX_DISTANCE_M &&
         needsHeight(record);
       if (!samplingUnsupported) {
-        if (photoreal && !scene.sampleHeightSupported) {
+        if (photoreal && !heights.supported().surface) {
           samplingUnsupported = true;
         } else {
           const due = records
@@ -208,7 +214,7 @@ export function createTransitScene(viewer, network, { classificationType }) {
           for (const record of due) {
             const height = sampleSurfaceHeight(record);
             record.resample = false;
-            if (Number.isFinite(height)) {
+            if (height !== null) {
               placeAt(record, height + STATION_ANCHOR_LIFT_M);
               record.resolved = true;
             } else {
@@ -220,25 +226,26 @@ export function createTransitScene(viewer, network, { classificationType }) {
 
       let pendingVisible = false;
       for (const record of records) {
-        record.point.show = !photoreal || record.resolved;
+        showDot(record, !photoreal || record.resolved);
         record.visible = record.inView && record.point.show;
         if (!samplingUnsupported && eligible(record)) pendingVisible = true;
       }
+      flush();
       return { pendingVisible };
     },
 
-    setSurface(type) {
-      for (const primitive of trackPrimitives)
-        primitive.classificationType = type;
-      photoreal = isPhotorealSurface(scene, type);
+    setSurface(next) {
+      for (const set of trackSets) set.setOptions({ clampTo: next });
+      photoreal = isPhotorealSurface(viewer, next);
       samplingUnsupported = false;
       for (const record of records) {
         record.resolved = false;
         record.resample = false;
         record.retryAt = 0;
         record.visible = false;
-        record.point.show = !photoreal;
+        showDot(record, !photoreal);
       }
+      flush();
     },
 
     rearmNearby() {
@@ -266,14 +273,9 @@ export function createTransitScene(viewer, network, { classificationType }) {
     dispose() {
       if (disposed) return;
       disposed = true;
-      for (const [collection, child] of [
-        [scene.groundPrimitives, tracks],
-        [scene.primitives, points],
-      ]) {
-        if (viewer.isDestroyed?.()) continue;
-        if (!collection.isDestroyed?.()) collection.remove(child);
-        else if (!child.isDestroyed?.()) child.destroy();
-      }
+      changed.clear();
+      for (const set of trackSets) set.dispose();
+      points.dispose();
       records.length = 0;
     },
   };

@@ -7839,9 +7839,23 @@
       "src/i18n/locales/zh-CN.json",
       "src/i18n/locales/zh-Hant.json",
       "src/i18n/locales/sv.json",
-      "src/i18n/locales/he.json"
+      "src/i18n/locales/he.json",
+      "src/geo/ellipsoid.js",
+      "src/render/color.js",
+      "src/render/rendererOf.js",
+      "src/queries/heights.js",
+      "src/input/dispatcher.js",
+      "src/layers/streetLevel/view.js",
+      "src/geo/vector.js",
+      "src/input/sensorPick.js",
+      "src/data/inputOwnership.js",
+      "src/data/pickRegistry.js",
+      "src/data/scenePick.js",
+      "src/layers/streetLevel/tileMath.js",
+      "src/geo/horizon.js",
+      "src/styles/styleStages.js"
     ],
-    "external": ["cesium"]
+    "external": []
   },
   "gnss": {
     "exports": ["./layers/gnss"],
@@ -8542,6 +8556,16 @@
       "src/layers/bitchat/records.js",
       "src/layers/bitchat/source.js",
       "src/layers/bitchat/cards.js",
+      "src/render/rendererOf.js",
+      "src/render/color.js",
+      "src/input/dispatcher.js",
+      "src/data/inputOwnership.js",
+      "src/input/sensorPick.js",
+      "src/styles/styleStages.js",
+      "src/data/scenePick.js",
+      "src/data/pickRegistry.js",
+      "src/geo/ellipsoid.js",
+      "src/geo/vector.js",
       "src/sources/httpBody.js",
       "src/i18n/marker.js",
       "src/i18n/index.js",
@@ -8560,7 +8584,7 @@
       "src/i18n/locales/sv.json",
       "src/i18n/locales/he.json"
     ],
-    "external": ["cesium"]
+    "external": []
   },
   "bitchat-source": {
     "exports": ["./layers/bitchat/source"],
