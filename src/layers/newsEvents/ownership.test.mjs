@@ -67,7 +67,7 @@ const row = {
   lon: 2.3333,
   articleCount: 4,
   mentions: 12,
-  categories: { violence: 1, protest: 3, coercion: 0, tension: 0 },
+  categories: { coercion: 1, protest: 3 },
   dominant: 'protest',
   latestMs: Date.UTC(2026, 9, 25, 8),
   events: [
@@ -81,7 +81,7 @@ const row = {
       domain: 'a.example',
     },
     {
-      category: 'violence',
+      category: 'coercion',
       actor1: null,
       actor2: null,
       mentions: 3,
@@ -114,7 +114,7 @@ test('each location renders as one point, the busiest drawn on top', async () =>
   assert.equal(h.layer.getAnalystRecords()[0].protest, 3);
   assert.deepEqual(
     h.layer.getRowControls().legend.map(({ count }) => count),
-    [0, 2, 0, 0],
+    [0, 2],
   );
 });
 
@@ -262,9 +262,9 @@ test('the card states counts, the top reports and the caveat', () => {
   });
   assert.deepEqual(card.details, [
     '4 articles in 24 h',
-    'Violence 1 · Protest 3',
+    'Coercion 1 · Protest 3',
     'Protest · Police → Protester · a.example · 2h ago',
-    'Violence · b.example · 4h ago',
+    'Coercion · b.example · 4h ago',
     'Machine-coded media reports, not verified incidents',
   ]);
   assert.equal(card.interactive, false);

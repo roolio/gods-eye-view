@@ -9,23 +9,17 @@ const CARD_EVENT_LINES = 3;
 
 /** CSS color per display category (marker fill and card accent). */
 export const NEWS_EVENT_COLORS = Object.freeze({
-  violence: '#ff3b30',
+  coercion: '#ff5a1f',
   protest: '#ffb300',
-  coercion: '#ff7a00',
-  tension: '#b388ff',
 });
 
 /** Category name in the UI language. */
 export function newsEventCategoryLabel(category) {
   switch (category) {
-    case 'violence':
-      return t('Violence', { context: 'news event' });
     case 'protest':
       return t('Protest', { context: 'news event' });
     case 'coercion':
       return t('Coercion', { context: 'news event' });
-    case 'tension':
-      return t('Tension', { context: 'news event' });
     default:
       return category;
   }
@@ -114,7 +108,7 @@ export function buildNewsEventCard(row, nowMs, { link = null } = {}) {
       : undefined),
     title,
     details,
-    accent: NEWS_EVENT_COLORS[row.dominant] ?? NEWS_EVENT_COLORS.tension,
+    accent: NEWS_EVENT_COLORS[row.dominant] ?? NEWS_EVENT_COLORS.protest,
     priority: Number.MAX_SAFE_INTEGER,
     gapPx: 15,
     verticalOnly: true,

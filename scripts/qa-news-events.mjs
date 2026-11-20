@@ -89,7 +89,7 @@ async function main() {
         Number.isFinite(r.lat) &&
         Number.isFinite(r.lon) &&
         r.articleCount >= 1 &&
-        ['violence', 'protest', 'coercion', 'tension'].includes(r.dominant),
+        ['coercion', 'protest'].includes(r.dominant),
     );
     record(
       'every location carries a position, a count and a kind',

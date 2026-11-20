@@ -4477,10 +4477,8 @@
   "Red: major flood": "אדום: שיטפון חמור",
   "Malformed Vigicrues response": "תגובה פגומה מ-Vigicrues",
   "Malformed Hub'Eau response": "תגובה פגומה מ-Hub'Eau",
-  "news event|Violence": "אלימות",
   "news event|Protest": "מחאה",
   "news event|Coercion": "כפייה",
-  "news event|Tension": "מתיחות",
   "{count} articles in 24 h": {
     "one": "{count} כתבה ב-24 שעות",
     "two": "{count} כתבות ב-24 שעות",
@@ -4496,7 +4494,7 @@
   "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT מקודד כתבות חדשות לאירועים וממקם אותם לפי הטקסט. הצבע מציין את הסוג הנפוץ ביותר בכל מקום; הגודל מציין את מספר הכתבות.",
   "Malformed news events snapshot": "תמונת מצב פגומה של אירועי חדשות",
   "Bitchat activity": "פעילות Bitchat",
-  "News Events (24h)": "אירועי חדשות (24 ש')",
   "Île-de-France Rail Network": "רשת הרכבות של איל-דה-פראנס",
-  "Flood Vigilance (France)": "התרעת הצפות (צרפת)"
+  "Flood Vigilance (France)": "התרעת הצפות (צרפת)",
+  "Protests & Crackdowns (24h)": "מחאות ודיכוי (24 ש')"
 }

@@ -3510,10 +3510,8 @@
   "Red: major flood": "Червоний: велика повінь",
   "Malformed Vigicrues response": "Некоректна відповідь Vigicrues",
   "Malformed Hub'Eau response": "Некоректна відповідь Hub'Eau",
-  "news event|Violence": "Насильство",
   "news event|Protest": "Протест",
   "news event|Coercion": "Примус",
-  "news event|Tension": "Напруженість",
   "{age} ago": "{age} тому",
   "Machine-coded media reports, not verified incidents": "Автоматично закодовані повідомлення ЗМІ, а не перевірені інциденти",
   "Top article ↗ · click card to open": "Головна стаття ↗ · натисніть картку, щоб відкрити",
@@ -3524,7 +3522,6 @@
   "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT кодує новинні статті як події та розміщує їх за текстом. Колір показує найчастіший тип на місці, розмір показує кількість статей.",
   "Malformed news events snapshot": "Некоректний знімок новинних подій",
   "Bitchat activity": "Активність Bitchat",
-  "News Events (24h)": "Новинні події (24 год)",
   "Île-de-France Rail Network": "Залізнична мережа Іль-де-Франс",
   "Flood Vigilance (France)": "Попередження про повені (Франція)",
   "{count} people": {
@@ -4608,5 +4605,6 @@
   "Finding it…": "Пошук…",
   "No reading at this time": "Немає даних на цей час",
   "Last reading · {age}": "Останні дані · {age}",
-  "Find it": "Знайти"
+  "Find it": "Знайти",
+  "Protests & Crackdowns (24h)": "Протести та репресії (24 год)"
 }

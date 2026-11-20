@@ -3041,10 +3041,8 @@
   "{count} people": {
     "other": "{count} 人"
   },
-  "news event|Violence": "暴力",
   "news event|Protest": "抗議",
   "news event|Coercion": "脅迫",
-  "news event|Tension": "緊張",
   "{count} articles in 24 h": {
     "other": "24 小時內 {count} 篇報道"
   },
@@ -3057,7 +3055,6 @@
   "News events source unavailable": "新聞事件數據源不可用",
   "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT 將新聞報道編碼為事件，並根據文本確定地點。顏色表示每個地點最常見的類型，大小表示報道數量。",
   "Malformed news events snapshot": "新聞事件快照格式錯誤",
-  "News Events (24h)": "新聞事件（24 小時）",
   "Recent speech": "最近語音",
   "Voice Settings": "語音設置",
   "Preview": "預覽",
@@ -4278,5 +4275,6 @@
   "Finding it…": "正在查找…",
   "No reading at this time": "此時無數據",
   "Last reading · {age}": "最後數據 · {age}",
-  "Find it": "查找"
+  "Find it": "查找",
+  "Protests & Crackdowns (24h)": "抗議與鎮壓（24 小時）"
 }

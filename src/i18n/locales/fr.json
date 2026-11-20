@@ -3424,10 +3424,8 @@
   "Red: major flood": "Rouge : crue majeure",
   "Malformed Vigicrues response": "Réponse Vigicrues mal formée",
   "Malformed Hub'Eau response": "Réponse Hub'Eau mal formée",
-  "news event|Violence": "Violence",
   "news event|Protest": "Manifestation",
   "news event|Coercion": "Coercition",
-  "news event|Tension": "Tension",
   "{age} ago": "il y a {age}",
   "Machine-coded media reports, not verified incidents": "Articles de presse codés par machine, incidents non vérifiés",
   "Top article ↗ · click card to open": "Article principal ↗ · cliquez sur la carte pour l'ouvrir",
@@ -3438,7 +3436,6 @@
   "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT code les articles de presse en événements et les situe d'après le texte. La couleur indique le type le plus fréquent par lieu, la taille le nombre d'articles.",
   "Malformed news events snapshot": "Instantané d'événements d'actualité mal formé",
   "Bitchat activity": "Activité Bitchat",
-  "News Events (24h)": "Événements d'actualité (24 h)",
   "Île-de-France Rail Network": "Réseau ferré d'Île-de-France",
   "Flood Vigilance (France)": "Vigilance crues (France)",
   "{count} people": {
@@ -4498,5 +4495,6 @@
   "Finding it…": "Recherche…",
   "No reading at this time": "Aucune donnée à cette heure",
   "Last reading · {age}": "Dernière donnée · {age}",
-  "Find it": "Retrouver"
+  "Find it": "Retrouver",
+  "Protests & Crackdowns (24h)": "Manifestations et répression (24 h)"
 }
