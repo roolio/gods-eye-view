@@ -1,10 +1,9 @@
-import * as Cesium from 'cesium';
+import { toLonLatH } from '../../geo/ellipsoid.js';
+import { CAPABILITIES } from '../../render/contract/index.js';
+import { createSceneHost } from '../../render/rendererOf.js';
+import { createStubRenderer } from '../../render/stub/index.js';
+import { STATION_SET_ID, TRACK_SET_PREFIX } from './scene.js';
 import { createBundledTransitNetworkSource } from './source.js';
-
-// Node has no WebGL context; GroundPolylinePrimitive validates its 1 px
-// render-state line width against these limits at construction.
-Cesium.ContextLimits._minimumAliasedLineWidth = 1;
-Cesium.ContextLimits._maximumAliasedLineWidth = 1;
 
 export const LINES = {
   B: {
@@ -122,79 +121,98 @@ export function parisFixture() {
   ]);
 }
 
-export function fakeViewer({
+/**
+ * A scene host with the stub renderer bound, the eye looking straight down
+ * on (`lon`, `lat`) from `heightM`. Surface heights answer from
+ * `surfaceHeight` (null for a miss), each call logged in `sampleCalls`;
+ * terrain heights answer from `terrainHeight`. Without
+ * `sampleHeightSupported` the renderer lacks the `sampleHeight` capability
+ * and answers no surface height, as the Cesium renderer without depth
+ * textures does.
+ */
+export function stubViewer({
   lon = 2.347,
   lat = 48.858,
   heightM = 3000,
   globeShow = true,
-  getHeight = () => undefined,
-  sampleHeight = () => undefined,
+  terrainHeight = () => null,
+  surfaceHeight = () => null,
   sampleHeightSupported = true,
 } = {}) {
+  const capabilities = new Set(CAPABILITIES);
+  if (!sampleHeightSupported) capabilities.delete('sampleHeight');
+  const renderer = createStubRenderer({
+    capabilities,
+    viewport: { width: 1200, height: 800 },
+  });
+  const { host: viewer, release } = createSceneHost(renderer, {
+    container: {},
+  });
+  renderer.globe.setGlobeVisible(globeShow);
+
   const sampleCalls = [];
-  const renders = { count: 0 };
-  const camera = {
-    positionWC: new Cesium.Cartesian3(),
-    directionWC: new Cesium.Cartesian3(),
-    upWC: new Cesium.Cartesian3(),
-    positionCartographic: new Cesium.Cartographic(),
-    frustum: new Cesium.PerspectiveFrustum({
-      fov: Cesium.Math.toRadians(60),
-      aspectRatio: 1.5,
-      near: 1,
-      far: 1e8,
-    }),
-    moveEnd: new Cesium.Event(),
+  renderer.query.sampleHeightNow = (point, options = {}) => {
+    const against = options.against ?? 'surface';
+    if (against === 'terrain') return terrainHeight(point) ?? null;
+    if (!capabilities.has('sampleHeight')) return null;
+    sampleCalls.push({ lon: point.lon, lat: point.lat, against });
+    return surfaceHeight(point) ?? null;
   };
+
+  // Live subscriptions to the frame's preRender and the camera's moveEnd.
+  const listeners = { preRender: 0, moveEnd: 0 };
+  const counted = (port, event) => {
+    const on = port.on.bind(port);
+    port.on = (name, cb, options) => {
+      const off = on(name, cb, options);
+      if (name !== event) return off;
+      listeners[event]++;
+      let live = true;
+      return () => {
+        if (live) listeners[event]--;
+        live = false;
+        off();
+      };
+    };
+  };
+  counted(renderer.frame, 'preRender');
+  counted(renderer.camera, 'moveEnd');
+
   function lookDownFrom(lonDeg, latDeg, height) {
-    Cesium.Cartesian3.fromDegrees(
-      lonDeg,
-      latDeg,
-      height,
-      Cesium.Ellipsoid.WGS84,
-      camera.positionWC,
-    );
-    const frame = Cesium.Transforms.eastNorthUpToFixedFrame(camera.positionWC);
-    const up = Cesium.Matrix4.getColumn(frame, 2, new Cesium.Cartesian4());
-    const north = Cesium.Matrix4.getColumn(frame, 1, new Cesium.Cartesian4());
-    Cesium.Cartesian3.negate(
-      Cesium.Cartesian3.fromCartesian4(up),
-      camera.directionWC,
-    );
-    Cesium.Cartesian3.fromCartesian4(north, camera.upWC);
-    Cesium.Cartographic.fromDegrees(
-      lonDeg,
-      latDeg,
-      height,
-      camera.positionCartographic,
-    );
+    renderer.camera.setView({
+      destination: { lon: lonDeg, lat: latDeg, height },
+      orientation: { heading: 0, pitch: -Math.PI / 2, roll: 0 },
+    });
   }
   lookDownFrom(lon, lat, heightM);
-  const scene = {
-    groundPrimitives: new Cesium.PrimitiveCollection(),
-    primitives: new Cesium.PrimitiveCollection(),
-    globe: {
-      show: globeShow,
-      tilesLoaded: false,
-      getHeight: (carto) => getHeight(carto),
-    },
-    sampleHeightSupported,
-    sampleHeight(carto, exclude) {
-      sampleCalls.push({
-        lon: Cesium.Math.toDegrees(carto.longitude),
-        lat: Cesium.Math.toDegrees(carto.latitude),
-        exclude,
-      });
-      return sampleHeight(carto);
-    },
-    preRender: new Cesium.Event(),
-    requestRender() {
-      renders.count++;
-    },
+
+  const items = (id) => [
+    ...(renderer.testing.setRecord(id)?.items.values() ?? []),
+  ];
+  return {
+    viewer,
+    renderer,
+    sampleCalls,
+    listeners,
+    lookDownFrom,
+    release,
+    pose: () => renderer.camera.pose(),
+    /** The station dots as drawn, in the order they were first drawn. */
+    dots: () => items(STATION_SET_ID),
+    dot: (id) => renderer.testing.setRecord(STATION_SET_ID)?.items.get(id),
+    /** The ids of the live track sets, in the order they were made. */
+    trackSets: () =>
+      renderer.testing
+        .sets()
+        .filter((id) => id.startsWith(`${TRACK_SET_PREFIX}:`)),
+    trackSet: (id) => renderer.testing.setRecord(id),
+    trackItems: (id) => items(id),
   };
-  return { scene, camera, sampleCalls, renders, lookDownFrom };
 }
 
+/** Metres above the ellipsoid of an ECEF position or a draw item's `pos`. */
 export function heightOf(position) {
-  return Number(Cesium.Cartographic.fromCartesian(position).height.toFixed(3));
+  const height =
+    'lon' in position ? position.height : toLonLatH(position).height;
+  return Number(height.toFixed(3));
 }

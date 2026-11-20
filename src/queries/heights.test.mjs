@@ -280,7 +280,6 @@ test('height queries go through the service', () => {
     'src/layers/streetLevel/view.js',
     // Fork layers, still to move onto `heightsOf`.
     'src/layers/floodVigilance/stations.js',
-    'src/layers/transitNetwork/scene.js',
   ]);
   const NAMES =
     'sampleHeight|sampleHeightNow|clampToSurface|clampToHeight|sampleHeightMostDetailed|clampToHeightMostDetailed|getHeight';
