@@ -77,14 +77,14 @@ git push origin main
 
 ## Couches du fork et contrat renderer de l'amont
 
-Depuis novembre 2026, l'amont interdit l'accès direct à Cesium hors de
-`src/render/cesium/` : ses tests vérifient la liste `src/render/cesiumAllowList.json`,
-le dispatcher d'entrées unique (`inputFor`) et le service de hauteurs
-(`heightsOf`). Nos couches bitchat, flood-vigilance, news-events et
-transit-network n'y sont pas encore portées. Elles figurent donc sur cette liste
-et dans les exceptions de `src/data/inputOwnership.test.mjs` et
-`src/queries/heights.test.mjs`. Une nouvelle couche du fork doit passer par les
-ports du renderer (`src/render/rendererOf.js`) plutôt que d'allonger ces listes.
+L'amont interdit l'accès direct à Cesium hors de `src/render/cesium/` : ses
+tests vérifient la liste `src/render/cesiumAllowList.json` (vide), le
+dispatcher d'entrées unique (`inputFor`) et le service de hauteurs
+(`heightsOf`), et la porte CI `npm run qa:stub-boot` échoue si Cesium est
+chargé. Toutes nos couches passent par les ports du renderer
+(`src/render/rendererOf.js`). Une nouvelle couche du fork doit faire de même,
+sans jamais allonger ces listes. Si elle est exportée comme package, ajoute
+son entrée à `DRAW_FROM_CALLER` dans `src/render/unboundCamera.test.mjs`.
 
 ## Jetons de liens de partage
 
