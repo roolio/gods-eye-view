@@ -167,7 +167,6 @@ test('pointer input, camera holds and the stock clicks go through the one dispat
         'src/render/cesium/input.js',
         'src/app/layers/bitchat.js',
         'src/app/layers/floodVigilance.js',
-        'src/app/layers/newsEvents.js',
       ],
     ],
     [

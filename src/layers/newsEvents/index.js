@@ -1,4 +1,3 @@
-import * as Cesium from 'cesium';
 import {
   NEWS_EVENTS_OVERLAY_SOURCE_ID,
   NEWS_EVENT_COLORS,
@@ -7,6 +6,12 @@ import {
 } from './cards.js';
 import { NEWS_EVENT_CATEGORIES } from './records.js';
 import { msg, t } from '../../i18n/index.js';
+import { fromDegrees } from '../../geo/ellipsoid.js';
+import { hexColor } from '../../render/color.js';
+import { drawOf, findFrame, findGlobe } from '../../render/rendererOf.js';
+import { inputFor } from '../../input/dispatcher.js';
+import { heightsOf } from '../../queries/heights.js';
+import { createHorizonCull } from '../streetLevel/view.js';
 export * from './records.js';
 export * from './cards.js';
 export { createGdeltNewsEventsSource } from './source.js';
@@ -18,6 +23,9 @@ const CARD_HOST_OPTIONS = Object.freeze({
   moving: false,
 });
 
+/** Marker outline: black at 60 %. */
+const OUTLINE_COLOR = Object.freeze([0, 0, 0, 0.6]);
+
 /** Marker size in pixels: grows with coverage, log-scaled so capitals stay legible. */
 export function newsEventPixelSize(articleCount) {
   const count = Math.max(1, Number(articleCount) || 1);
@@ -26,48 +34,38 @@ export function newsEventPixelSize(articleCount) {
 
 /**
  * A fixed marker position on the ground, never clamped. With Google 3D tiles
- * the globe is hidden, so CLAMP_TO_GROUND samples whatever coarse tile is
- * loaded: markers sank 5 to 150 km under the surface and changed depth with
- * every zoom, and an always-on-top point that deep slides off its place as
- * the camera moves. The globe height is used only when the globe is drawn.
+ * the globe is hidden, so a clamp samples whatever coarse tile is loaded:
+ * markers sank 5 to 150 km under the surface and changed depth with every
+ * zoom, and an always-on-top point that deep slides off its place as the
+ * camera moves. The terrain height is used only when the globe is drawn.
  */
 function markerPosition(viewer, row) {
-  const globe = viewer?.scene?.globe;
-  const ground = globe?.show
-    ? globe.getHeight?.(Cesium.Cartographic.fromDegrees(row.lon, row.lat))
-    : null;
-  return Cesium.Cartesian3.fromDegrees(
-    row.lon,
-    row.lat,
-    Number.isFinite(ground) ? ground : 0,
-  );
+  const ground =
+    viewer && findGlobe(viewer)?.isGlobeVisible?.() === true
+      ? heightsOf(viewer).now(
+          { lon: row.lon, lat: row.lat },
+          { against: 'terrain' },
+        )
+      : null;
+  return fromDegrees(row.lon, row.lat, Number.isFinite(ground) ? ground : 0);
 }
-
-/**
- * Horizon occluder sunk 1 km below WGS84, as in the street-level cones: ground
- * can lie below the ellipsoid, and an occluder at 0 m would hide markers on it.
- */
-const HORIZON_DEPTH_M = 1000;
-const HORIZON_ELLIPSOID = new Cesium.Ellipsoid(
-  Cesium.Ellipsoid.WGS84.radii.x - HORIZON_DEPTH_M,
-  Cesium.Ellipsoid.WGS84.radii.y - HORIZON_DEPTH_M,
-  Cesium.Ellipsoid.WGS84.radii.z - HORIZON_DEPTH_M,
-);
 
 /** Own one GDELT news-event display, its refresh lifecycle, and click selection. */
 export function createNewsEventsLayer({
   source,
   overlayHost = null,
-  screenSpaceEventHandlerFactory = null,
   picking = null,
   pointer = null,
   openExternal = null,
+  // The clicks on the globe: the application's input dispatcher.
+  input = (viewer) => inputFor(viewer),
 } = {}) {
   if (typeof source?.getSnapshot !== 'function')
     throw new TypeError('News events require a snapshot source');
   let _viewer = null;
   let _request = null;
-  let _dataSource = null;
+  /** The point set every marker draws in. */
+  let _markerSet = null;
   let _count = 0;
   let _lastUpdate = null;
   let _lastError = null;
@@ -78,47 +76,39 @@ export function createNewsEventsLayer({
   let _selectedCardId = null;
   /** @type {Map<string, Object>} */
   const _rowById = new Map();
-  /** @type {Array<{entity: Cesium.Entity, position: Cesium.Cartesian3}>} */
+  /**
+   * One per marker, in drawing order: the item as the set draws it, its
+   * ECEF position, and whether it is in front of the horizon.
+   * @type {Array<{item: Object, position: {x: number, y: number, z: number}, show: boolean}>}
+   */
   let _markers = [];
-  const _occluder = new Cesium.EllipsoidalOccluder(HORIZON_ELLIPSOID);
-  let _culledFrom = null;
-  let _stopCulling = null;
+
+  const requestRender = () => {
+    if (_viewer) findFrame(_viewer)?.requestRender?.('news-events');
+  };
 
   /**
    * Hide markers behind the horizon. They skip the depth test and the globe
    * is hidden under Google 3D tiles, so nothing else stops the far side of
    * the planet drawing through it, sliding the wrong way as the camera moves.
    */
-  function cullHorizon(force = false) {
-    const position = _viewer?.camera?.positionWC;
-    if (!position) return;
-    if (
-      !force &&
-      _culledFrom &&
-      Cesium.Cartesian3.equals(_culledFrom, position)
-    )
-      return;
-    _culledFrom = Cesium.Cartesian3.clone(position, _culledFrom);
-    _occluder.cameraPosition = position;
-    for (const marker of _markers) {
-      const show = _occluder.isPointVisible(marker.position);
-      if (marker.entity.show !== show) marker.entity.show = show;
-    }
+  const _horizon = createHorizonCull({
+    getViewer: () => _viewer,
+    items: () => _markers,
+    onChange: (changed) => {
+      _markerSet?.upsert(changed.map(syncItem));
+      requestRender();
+    },
+  });
+
+  /** The marker's item with its current `show`. */
+  function syncItem(marker) {
+    if (marker.item.show !== marker.show)
+      marker.item = { ...marker.item, show: marker.show };
+    return marker.item;
   }
 
-  function startCulling() {
-    _stopCulling ||=
-      _viewer?.scene?.preRender?.addEventListener(() => cullHorizon()) || null;
-  }
-
-  function stopCulling() {
-    _stopCulling?.();
-    _stopCulling = null;
-    _culledFrom = null;
-  }
-
-  const canSelect = () =>
-    overlayHost && screenSpaceEventHandlerFactory && picking;
+  const canSelect = () => overlayHost && picking;
 
   function publishSelectedCard() {
     if (!canSelect()) return;
@@ -137,7 +127,7 @@ export function createNewsEventsLayer({
     _selectedLink = openExternal ? (row.events[0]?.url ?? null) : null;
     const card = {
       ...buildNewsEventCard(row, Date.now(), { link: _selectedLink }),
-      position: Cesium.Cartesian3.fromDegrees(row.lon, row.lat),
+      position: fromDegrees(row.lon, row.lat),
     };
     if (_selectedLink) {
       const link = _selectedLink;
@@ -155,9 +145,8 @@ export function createNewsEventsLayer({
     );
   }
 
-  /** Resolve a scene pick to one of this layer's location ids, or null. */
-  function pickedLocationId(picked) {
-    const pickId = picking.resolvePickId(picked);
+  /** Resolve a pick id to one of this layer's location ids, or null. */
+  function pickedLocationId(pickId) {
     if (typeof pickId !== 'string' || !pickId.startsWith(PICK_PREFIX))
       return null;
     const locationId = pickId.slice(PICK_PREFIX.length);
@@ -171,42 +160,54 @@ export function createNewsEventsLayer({
     picking.registerPickOwner?.(layer.id, (pickId) =>
       String(pickId).startsWith(PICK_PREFIX),
     );
-    _clickHandler = screenSpaceEventHandlerFactory(_viewer);
-    _clickHandler.setInputAction((click) => {
+    // A viewer with no renderer input bound takes no clicks.
+    let clicks = null;
+    try {
+      clicks = input(_viewer) ?? null;
+    } catch {
+      clicks = null;
+    }
+    if (!clicks) return;
+    _clickHandler = clicks.onClick((click) => {
       if (pointer && !pointer.isPointerFree()) return;
-      const cardHit = overlayHost.hitTest?.(
-        click.position?.x,
-        click.position?.y,
-        { sourceId: NEWS_EVENTS_OVERLAY_SOURCE_ID },
-      );
-      if (cardHit && cardHit.entryId === _selectedCardId) {
-        if (_selectedLink && openExternal) openExternal(_selectedLink);
+      // The card or label painted on top takes the click, read once per
+      // click so every layer agrees: ours opens the top article; another
+      // layer's is that layer's click, and the selection stays.
+      const cardHit = picking.clickCard?.(click) ?? null;
+      if (cardHit) {
+        if (
+          cardHit.sourceId === NEWS_EVENTS_OVERLAY_SOURCE_ID &&
+          cardHit.entryId === _selectedCardId &&
+          _selectedLink &&
+          openExternal
+        )
+          openExternal(_selectedLink);
         return;
       }
-      const picked = _viewer.scene.pick(click.position);
-      const locationId = picked ? pickedLocationId(picked) : null;
+      // A marker's item id is its pick id, `news-event:<id>`, read from what
+      // is exactly under the click.
+      const picked = click.topHit;
+      const pickId = picked ? (picking.resolvePickId(picked) ?? null) : null;
+      const locationId = pickedLocationId(pickId);
       if (locationId) {
         _selectedId = locationId;
         publishSelectedCard();
+        requestRender();
         return;
       }
       // A pick that belongs to a sibling layer is not "empty space".
-      if (picked) {
-        const pickId = picking.resolvePickId(picked);
-        if (pickId && picking.isOwnedByOtherLayer(layer.id, pickId)) return;
-      }
+      if (pickId && picking.isOwnedByOtherLayer(layer.id, pickId)) return;
       if (_selectedId) {
         _selectedId = null;
         publishSelectedCard();
+        requestRender();
       }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    });
   }
 
   function removeClickHandler() {
-    if (_clickHandler) {
-      _clickHandler.destroy();
-      _clickHandler = null;
-    }
+    _clickHandler?.();
+    _clickHandler = null;
     picking?.unregisterPickOwner?.(layer.id);
   }
 
@@ -230,9 +231,10 @@ export function createNewsEventsLayer({
     init(viewer) {
       if (_viewer) throw new Error('News events layer is already initialized');
       _viewer = viewer;
-      _dataSource = new Cesium.CustomDataSource('news-events');
-      _dataSource.show = false;
-      viewer.dataSources.add(_dataSource);
+      _markerSet = drawOf(viewer).points({
+        id: 'news-events:markers',
+        show: false,
+      });
       _count = 0;
       _lastUpdate = null;
       _lastError = null;
@@ -242,24 +244,26 @@ export function createNewsEventsLayer({
 
     enable() {
       _enabled = true;
-      if (_dataSource) _dataSource.show = true;
+      if (_markerSet) _markerSet.show = true;
       overlayHost?.setVisible?.(NEWS_EVENTS_OVERLAY_SOURCE_ID, true);
       installClickHandler();
-      startCulling();
+      if (_markers.length) _horizon.update();
+      requestRender();
     },
 
     disable() {
       _request?.abort();
       _request = null;
       _enabled = false;
-      if (_dataSource) _dataSource.show = false;
-      stopCulling();
+      if (_markerSet) _markerSet.show = false;
+      _horizon.stop();
       removeClickHandler();
       clearSelection();
+      requestRender();
     },
 
     async update() {
-      if (!_enabled || !_dataSource) return false;
+      if (!_enabled || !_markerSet) return false;
       _request?.abort();
       const request = new AbortController();
       _request = request;
@@ -276,32 +280,29 @@ export function createNewsEventsLayer({
           const position = markerPosition(_viewer, row);
           return {
             position,
-            entity: new Cesium.Entity({
+            show: true,
+            item: {
               id: `${PICK_PREFIX}${row.stableId}`,
-              position,
-              point: {
-                pixelSize: newsEventPixelSize(row.articleCount),
-                color: Cesium.Color.fromCssColorString(
-                  NEWS_EVENT_COLORS[row.dominant],
-                ).withAlpha(0.85),
-                outlineColor: Cesium.Color.BLACK.withAlpha(0.6),
-                outlineWidth: 1,
-                // Always on top: a marker hidden behind 3D tiles is a lost report.
-                disableDepthTestDistance: Number.POSITIVE_INFINITY,
-              },
-            }),
+              pos: position,
+              pixelSize: newsEventPixelSize(row.articleCount),
+              color: hexColor(NEWS_EVENT_COLORS[row.dominant], 0.85),
+              outlineColor: OUTLINE_COLOR,
+              outlineWidth: 1,
+              // Always on top: a marker hidden behind 3D tiles is a lost report.
+              disableDepthTest: Number.POSITIVE_INFINITY,
+              show: true,
+            },
           };
         });
         _rowById.clear();
         for (const row of rows) _rowById.set(row.stableId, row);
-        _dataSource.entities.suspendEvents();
-        _dataSource.entities.removeAll();
-        for (const { entity } of nextMarkers) _dataSource.entities.add(entity);
-        _dataSource.entities.resumeEvents();
         _markers = nextMarkers;
-        cullHorizon(true);
+        // Cull before drawing, so a far-side marker never shows for a frame.
+        _horizon.update(nextMarkers, { quiet: true });
+        _markerSet.set(nextMarkers.map(syncItem));
         // Refresh (or drop) the selected location's card against the new feed.
         if (_selectedId) publishSelectedCard();
+        requestRender();
         _count = rows.length;
         _lastUpdate = Date.now();
         _lastError = null;
@@ -318,20 +319,20 @@ export function createNewsEventsLayer({
       }
     },
 
-    destroy(viewer = _viewer) {
+    destroy() {
       _request?.abort();
       _request = null;
-      stopCulling();
+      _horizon.stop();
       _markers = [];
       removeClickHandler();
       clearSelection();
       _rowById.clear();
-      _viewer = null;
       _enabled = false;
-      if (_dataSource) {
-        viewer.dataSources.remove(_dataSource, true);
-        _dataSource = null;
+      if (_markerSet) {
+        _markerSet.dispose();
+        _markerSet = null;
       }
+      _viewer = null;
       _count = 0;
       _lastUpdate = null;
       _lastError = null;
@@ -339,7 +340,7 @@ export function createNewsEventsLayer({
 
     /** Snapshot location aggregates for the analyst query engine. */
     getAnalystRecords(maxCount = 2000) {
-      if (!_dataSource || !_dataSource.show) return [];
+      if (!_markerSet || !_markerSet.show) return [];
       const limit = Number.isFinite(maxCount)
         ? Math.max(1, Math.floor(maxCount))
         : 2000;

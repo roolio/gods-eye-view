@@ -115,10 +115,13 @@ async function main() {
     await sleep(4000);
     const screen = await page.evaluate((t) => {
       const { viewer } = window.__godsEyeView;
-      const entity = viewer.dataSources
-        .getByName('news-events')[0]
-        ?.entities.getById(`news-event:${t.id}`);
-      const position = entity?.position?.getValue(viewer.clock.currentTime);
+      // Markers draw through the renderer's draw port at the place's ground
+      // height (0 m under photoreal tiles), so project the place itself.
+      const position = viewer.scene.globe.ellipsoid.cartographicToCartesian({
+        longitude: (t.lon * Math.PI) / 180,
+        latitude: (t.lat * Math.PI) / 180,
+        height: 0,
+      });
       const point = position
         ? viewer.scene.cartesianToCanvasCoordinates(position)
         : null;
