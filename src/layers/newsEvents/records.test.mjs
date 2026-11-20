@@ -26,6 +26,7 @@ function line({
   featureId = '-1456928',
   added = '20261025080000',
   url = 'https://example.org/a',
+  code = `${root}0`,
 } = {}) {
   const cells = Array(61).fill('');
   Object.assign(cells, {
@@ -33,7 +34,7 @@ function line({
     6: actor1,
     16: actor2,
     25: '1',
-    26: `${root}0`,
+    26: code,
     28: root,
     29: quad,
     31: mentions,
@@ -50,11 +51,15 @@ function line({
 }
 
 test('a real export line maps to the documented columns', () => {
-  const [row] = parseGdeltEventsExport(`${REAL_LINE}\r\n`);
+  // Physical violence (190) is the upstream News layer's: the line is dropped
+  // as published, and read once recoded as a riot (145).
+  assert.deepEqual(parseGdeltEventsExport(REAL_LINE), []);
+  const riot = REAL_LINE.replace('\t190\t190\t19\t', '\t145\t145\t14\t');
+  const [row] = parseGdeltEventsExport(`${riot}\r\n`);
   assert.deepEqual(row, {
     id: '1329732395',
-    category: 'violence',
-    eventCode: '190',
+    category: 'protest',
+    eventCode: '145',
     rootEvent: true,
     actor1: null,
     actor2: 'Protester',
@@ -73,7 +78,7 @@ test('a real export line maps to the documented columns', () => {
   });
 });
 
-test('only city-level conflict and unrest with a usable location and link survive', () => {
+test('only city-level protests and crackdowns with a usable location and link survive', () => {
   const text = [
     line({ id: '1' }),
     line({ id: '2', quad: '1', root: '04' }), // cooperation
@@ -82,13 +87,22 @@ test('only city-level conflict and unrest with a usable location and link surviv
     line({ id: '5', url: 'javascript:alert(1)' }),
     line({ id: '6', lat: '91' }),
     line({ id: '7' }).split('\t').slice(0, 40).join('\t'), // truncated
-    line({ id: '8', geoType: '3', root: '18', quad: '4' }),
+    line({ id: '8', geoType: '3', root: '15' }),
+    line({ id: '9', root: '18', quad: '4' }), // violence: the News layer's
+    line({ id: '10', root: '11' }), // disapprove
+    line({ id: '11', root: '17', code: '173', quad: '4' }), // plain arrest
+    line({ id: '12', root: '17', code: '172', quad: '4' }), // generic sanction
+    line({ id: '13', root: '17', code: '1723', quad: '4' }), // curfew
+    line({ id: '14', root: '17', code: '175', quad: '4' }), // violent repression
+    line({ id: '15', root: '16', code: '163', quad: '4' }), // embargo
   ].join('\n');
   assert.deepEqual(
     parseGdeltEventsExport(text).map(({ id, category }) => [id, category]),
     [
       ['1', 'protest'],
-      ['8', 'violence'],
+      ['8', 'coercion'],
+      ['13', 'coercion'],
+      ['14', 'coercion'],
     ],
   );
 });
@@ -99,8 +113,7 @@ test('an article coded into several events counts once per location', () => {
       line({ id: '1', root: '14', mentions: '2', url: 'https://a.example/x' }),
       line({
         id: '2',
-        root: '19',
-        quad: '4',
+        root: '15',
         mentions: '9',
         url: 'https://a.example/x',
       }),
@@ -119,18 +132,13 @@ test('an article coded into several events counts once per location', () => {
   const [paris, london] = aggregateNewsEvents(events);
   assert.equal(paris.stableId, '-1456928');
   assert.equal(paris.articleCount, 3);
-  assert.deepEqual(paris.categories, {
-    violence: 1,
-    protest: 2,
-    coercion: 0,
-    tension: 0,
-  });
+  assert.deepEqual(paris.categories, { coercion: 1, protest: 2 });
   assert.equal(paris.dominant, 'protest');
   assert.equal(paris.mentions, 11);
   assert.deepEqual(
     paris.events.map(({ category, domain }) => [category, domain]),
     [
-      ['violence', 'a.example'],
+      ['coercion', 'a.example'],
       ['protest', 'b.example'],
       ['protest', 'c.example'],
     ],
@@ -143,12 +151,12 @@ test('a category tie resolves to the more severe kind', () => {
   const [row] = aggregateNewsEvents(
     parseGdeltEventsExport(
       [
-        line({ id: '1', root: '11', url: 'https://a.example/1' }),
-        line({ id: '2', root: '18', quad: '4', url: 'https://a.example/2' }),
+        line({ id: '1', root: '14', url: 'https://a.example/1' }),
+        line({ id: '2', root: '15', url: 'https://a.example/2' }),
       ].join('\n'),
     ),
   );
-  assert.equal(row.dominant, 'violence');
+  assert.equal(row.dominant, 'coercion');
 });
 
 test('actor names read as names, with two-letter codes kept upper-case', () => {
@@ -193,11 +201,6 @@ test('the browser keeps valid locations and rejects only a missing list', () => 
     rows.map(({ stableId }) => stableId),
     ['x'],
   );
-  assert.deepEqual(rows[0].categories, {
-    violence: 0,
-    protest: 3,
-    coercion: 0,
-    tension: 0,
-  });
+  assert.deepEqual(rows[0].categories, { coercion: 0, protest: 3 });
   assert.equal(rows[0].events.length, 1);
 });

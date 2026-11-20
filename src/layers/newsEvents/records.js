@@ -4,9 +4,11 @@
  *
  * GDELT machine-codes news articles into CAMEO events and geocodes them from
  * the article text, so a row is a media report of an event at a place, not a
- * verified incident. Only conflict and unrest (QuadClass 3 and 4) with a
+ * verified incident. Only protests and political crackdowns with a
  * city-level location are kept: country- and state-level rows sit on
- * centroids and would pile up in the middle of every country.
+ * centroids and would pile up in the middle of every country. Physical
+ * violence is left to the upstream News layer; threats, demands, arrests and
+ * diplomatic moves were mostly ordinary news and drowned the map.
  */
 
 /** 0-based columns of the 61-column Events 2.0 export this layer reads. */
@@ -16,8 +18,6 @@ const COLUMN = Object.freeze({
   actor2: 16,
   isRoot: 25,
   eventCode: 26,
-  rootCode: 28,
-  quadClass: 29,
   goldstein: 30,
   mentions: 31,
   sources: 32,
@@ -38,27 +38,30 @@ const EXPORT_COLUMNS = 61;
 const CITY_GEO_TYPES = new Set(['3', '4']);
 
 /** Display categories, most severe first (ties in a location resolve in this order). */
-export const NEWS_EVENT_CATEGORIES = Object.freeze([
-  'violence',
-  'protest',
-  'coercion',
-  'tension',
-]);
+export const NEWS_EVENT_CATEGORIES = Object.freeze(['coercion', 'protest']);
 
-/** CAMEO root code (10-20) to display category. */
-const CATEGORY_BY_ROOT = Object.freeze({
-  10: 'tension', // demand
-  11: 'tension', // disapprove
-  12: 'tension', // reject
-  13: 'tension', // threaten
-  14: 'protest',
-  15: 'coercion', // exhibit force posture
-  16: 'coercion', // reduce relations
-  17: 'coercion', // coerce
-  18: 'violence', // assault
-  19: 'violence', // fight
-  20: 'violence', // unconventional mass violence
-});
+/**
+ * CAMEO event code to display category, or null when out of scope.
+ * - protest: root 14 (demonstrate, hunger strike, strike or boycott,
+ *   obstruct, riot);
+ * - coercion: root 15 (police and military alerts, mobilisation), 1721 to
+ *   1724 (restrict political freedoms, ban parties, curfew, state of
+ *   emergency) and 175 (violent repression). Plain arrests (173) and the
+ *   generic 172 are left out: they are mostly crime and court news.
+ * @param {string} code
+ * @returns {'protest'|'coercion'|null}
+ */
+export function newsEventCategory(code) {
+  const value = String(code ?? '');
+  if (/^14\d*$/.test(value)) return 'protest';
+  if (
+    /^15\d*$/.test(value) ||
+    /^172[1-4]$/.test(value) ||
+    /^175\d*$/.test(value)
+  )
+    return 'coercion';
+  return null;
+}
 
 /** Events kept per location for the card and the analyst records. */
 export const NEWS_EVENTS_PER_LOCATION = 5;
@@ -124,10 +127,8 @@ export function parseGdeltEventsExport(text) {
     if (!line) continue;
     const cells = line.replace(/\r$/, '').split('\t');
     if (cells.length < EXPORT_COLUMNS) continue;
-    const quadClass = cells[COLUMN.quadClass];
-    if (quadClass !== '3' && quadClass !== '4') continue;
     if (!CITY_GEO_TYPES.has(cells[COLUMN.geoType])) continue;
-    const category = CATEGORY_BY_ROOT[Number(cells[COLUMN.rootCode])];
+    const category = newsEventCategory(cells[COLUMN.eventCode]);
     if (!category) continue;
     const lat = finite(cells[COLUMN.lat]);
     const lon = finite(cells[COLUMN.lon]);

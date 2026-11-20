@@ -4368,10 +4368,8 @@
   "Red: major flood": "Röd: stor översvämning",
   "Malformed Vigicrues response": "Felaktigt svar från Vigicrues",
   "Malformed Hub'Eau response": "Felaktigt svar från Hub'Eau",
-  "news event|Violence": "Våld",
   "news event|Protest": "Protest",
   "news event|Coercion": "Tvång",
-  "news event|Tension": "Spänning",
   "{count} articles in 24 h": {
     "one": "{count} artikel på 24 h",
     "other": "{count} artiklar på 24 h"
@@ -4386,7 +4384,7 @@
   "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT kodar nyhetsartiklar som händelser och placerar dem utifrån texten. Färgen visar den vanligaste typen per plats; storleken visar antalet artiklar.",
   "Malformed news events snapshot": "Felaktig ögonblicksbild av nyhetshändelser",
   "Bitchat activity": "Bitchat-aktivitet",
-  "News Events (24h)": "Nyhetshändelser (24 h)",
   "Île-de-France Rail Network": "Île-de-Frances järnvägsnät",
-  "Flood Vigilance (France)": "Översvämningsvarning (Frankrike)"
+  "Flood Vigilance (France)": "Översvämningsvarning (Frankrike)",
+  "Protests & Crackdowns (24h)": "Protester och förtryck (24 h)"
 }

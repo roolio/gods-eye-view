@@ -3317,10 +3317,8 @@
     "many": "{count} человек",
     "other": "{count} человека"
   },
-  "news event|Violence": "Насилие",
   "news event|Protest": "Протест",
   "news event|Coercion": "Принуждение",
-  "news event|Tension": "Напряжённость",
   "{count} articles in 24 h": {
     "one": "{count} статья за 24 ч",
     "few": "{count} статьи за 24 ч",
@@ -3336,8 +3334,6 @@
   "News events source unavailable": "Источник новостных событий недоступен",
   "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT кодирует новостные статьи как события и определяет их место по тексту. Цвет показывает самый частый тип в каждом месте, размер показывает число статей.",
   "Malformed news events snapshot": "Некорректный снимок новостных событий",
-  "News Events (24h)": "Новостные события (24 ч)",
-  "Panels": "Панели",
   "Recent speech": "Недавняя речь",
   "Voice Settings": "Настройки голоса",
   "Preview": "Предпросмотр",
@@ -4609,5 +4605,6 @@
   "Finding it…": "Поиск…",
   "No reading at this time": "Нет данных на это время",
   "Last reading · {age}": "Последние данные · {age}",
-  "Find it": "Найти"
+  "Find it": "Найти",
+  "Protests & Crackdowns (24h)": "Протесты и репрессии (24 ч)"
 }

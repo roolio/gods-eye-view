@@ -3252,10 +3252,8 @@
   "Red: major flood": "赤: 大洪水",
   "Malformed Vigicrues response": "Vigicrues の応答が不正です",
   "Malformed Hub'Eau response": "Hub'Eau の応答が不正です",
-  "news event|Violence": "暴力",
   "news event|Protest": "抗議",
   "news event|Coercion": "強制",
-  "news event|Tension": "緊張",
   "{age} ago": "{age}前",
   "Machine-coded media reports, not verified incidents": "機械的に分類された報道であり、確認済みの事件ではありません",
   "Top article ↗ · click card to open": "主要記事 ↗ · カードをクリックして開く",
@@ -3266,7 +3264,6 @@
   "GDELT codes news articles into events and places them from the text. Colour shows the most frequent kind per place; size shows article count.": "GDELT はニュース記事をイベントに分類し、本文から場所を特定します。色は場所ごとの最多の種類、大きさは記事数を示します。",
   "Malformed news events snapshot": "ニュースイベントのスナップショットが不正です",
   "Bitchat activity": "Bitchat アクティビティ",
-  "News Events (24h)": "ニュースイベント (24時間)",
   "Île-de-France Rail Network": "イル=ド=フランス鉄道網",
   "Flood Vigilance (France)": "洪水警戒 (フランス)",
   "{count} people": {
@@ -4278,5 +4275,6 @@
   "Finding it…": "検索中…",
   "No reading at this time": "この時刻のデータなし",
   "Last reading · {age}": "最終データ・{age}",
-  "Find it": "探す"
+  "Find it": "探す",
+  "Protests & Crackdowns (24h)": "抗議と弾圧（24時間）"
 }

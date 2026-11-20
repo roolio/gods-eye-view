@@ -222,7 +222,7 @@ export function createNewsEventsLayer({
 
   const layer = {
     id: 'news-events',
-    name: 'News Events (24h)',
+    name: 'Protests & Crackdowns (24h)',
     icon: '📰',
     source: 'GDELT',
     updateInterval: 300000,
