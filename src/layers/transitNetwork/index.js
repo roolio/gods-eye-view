@@ -1,5 +1,6 @@
-import * as Cesium from 'cesium';
+import { dot } from '../../geo/vector.js';
 import { t } from '../../i18n/index.js';
+import { cameraOf, findFrame, findGlobe } from '../../render/rendererOf.js';
 import {
   cableClassificationTypeForScene,
   cableClassificationTypeForStack,
@@ -11,46 +12,15 @@ import {
 } from './labels.js';
 import { createTransitScene } from './scene.js';
 
-/** The shared cable surface helpers name a clamp target; the scene here wants Cesium's. */
-const CLASSIFICATION_BY_CLAMP = {
-  tiles: Cesium.ClassificationType.CESIUM_3D_TILE,
-  terrain: Cesium.ClassificationType.TERRAIN,
-  both: Cesium.ClassificationType.BOTH,
-};
-const surfaceForStack = (activeId) =>
-  CLASSIFICATION_BY_CLAMP[cableClassificationTypeForStack(activeId)];
-/** Without a bound renderer, read the globe the way the helper used to. */
-function surfaceForScene(host) {
-  const clamp = cableClassificationTypeForScene(host);
-  const shown = host?.scene?.globe?.show;
-  if (clamp === 'both' && typeof shown === 'boolean')
-    return shown
-      ? Cesium.ClassificationType.TERRAIN
-      : Cesium.ClassificationType.CESIUM_3D_TILE;
-  return CLASSIFICATION_BY_CLAMP[clamp];
-}
-
 export const TRANSIT_NETWORK_LAYER_ID = 'transit-network';
 
 const PROBE_INTERVAL_MS = 250;
 const RETRY_FRAME_MS = 1000;
-const COS_ONE_DEGREE = Math.cos(Cesium.Math.toRadians(1));
+const COS_ONE_DEGREE = Math.cos(Math.PI / 180);
 
-/** Photoreal tilesets live in scene.primitives; the globe reports its own. */
-function surfaceTilesLoaded(scene) {
-  if (scene?.globe?.show !== false) return scene?.globe?.tilesLoaded === true;
-  const primitives = scene.primitives;
-  for (let i = 0; i < primitives.length; i++) {
-    const primitive = primitives.get(i);
-    if (
-      primitive instanceof Cesium.Cesium3DTileset &&
-      primitive.show &&
-      !primitive.tilesLoaded
-    )
-      return false;
-  }
-  return true;
-}
+/** The surface in view (the globe's tiles, or the photoreal ones) has loaded. */
+const surfaceTilesLoaded = (viewer) =>
+  findGlobe(viewer)?.isSettled('surface') === true;
 
 /**
  * Static Île-de-France rail network: 46 lines in official colours, one dot
@@ -84,14 +54,15 @@ export function createTransitNetworkLayer({
   let pending = null;
   let error = null;
   let lastUpdate = null;
-  let classificationType = Cesium.ClassificationType.BOTH;
+  /** @type {'tiles'|'terrain'|'both'} What the tracks drape on. */
+  let clampTo = 'both';
   const gate = createCableReferenceSweepGate({
     now,
     probeIntervalMs: PROBE_INTERVAL_MS,
     motionEpsilonM: 25,
   });
   const labels = createStationLabelPublisher({ host: overlayHost });
-  const sweptDirection = new Cesium.Cartesian3();
+  const sweptDirection = { x: 0, y: 0, z: 0 };
   let hasSweptDirection = false;
   let lastProbeAt = -Infinity;
   let tilesWereLoaded = false;
@@ -100,11 +71,13 @@ export function createTransitNetworkLayer({
   let removeMoveEnd = null;
   let onStackChanged = null;
 
-  const requestRender = () => viewer?.scene?.requestRender?.();
+  const requestRender = () => {
+    if (viewer) findFrame(viewer)?.requestRender('transit-network');
+  };
 
   function mount() {
     if (scene || !enabled || !viewer || !network) return;
-    scene = createTransitScene(viewer, network, { classificationType });
+    scene = createTransitScene(viewer, network, { clampTo });
     gate.markDirty();
     requestRender();
   }
@@ -159,17 +132,14 @@ export function createTransitNetworkLayer({
   }
 
   function headingChanged(direction) {
-    return (
-      hasSweptDirection &&
-      Cesium.Cartesian3.dot(direction, sweptDirection) < COS_ONE_DEGREE
-    );
+    return hasSweptDirection && dot(direction, sweptDirection) < COS_ONE_DEGREE;
   }
 
-  function probe(camera, time) {
+  function probe(pose, time) {
     if (time - lastProbeAt < PROBE_INTERVAL_MS) return;
     lastProbeAt = time;
-    if (headingChanged(camera.directionWC)) gate.markDirty();
-    const loaded = surfaceTilesLoaded(viewer.scene);
+    if (headingChanged(pose.direction)) gate.markDirty();
+    const loaded = surfaceTilesLoaded(viewer);
     if (loaded && !tilesWereLoaded && scene.rearmNearby() > 0) gate.markDirty();
     tilesWereLoaded = loaded;
   }
@@ -185,19 +155,16 @@ export function createTransitNetworkLayer({
 
   function sweep() {
     if (!enabled || !scene) return;
-    const camera = viewer.camera;
+    const pose = cameraOf(viewer).pose();
     const time = now();
-    probe(camera, time);
-    if (!gate.shouldRun(camera)) return;
-    Cesium.Cartesian3.clone(camera.directionWC, sweptDirection);
+    probe(pose, time);
+    if (!gate.shouldRun({ positionWC: pose.position })) return;
+    sweptDirection.x = pose.direction.x;
+    sweptDirection.y = pose.direction.y;
+    sweptDirection.z = pose.direction.z;
     hasSweptDirection = true;
-    const { pendingVisible } = scene.sweep(camera, time);
-    labels.publish(
-      selectStationLabelWinners(
-        scene.records,
-        camera.positionCartographic.height,
-      ),
-    );
+    const { pendingVisible } = scene.sweep(pose, time);
+    labels.publish(selectStationLabelWinners(scene.records, pose.height));
     if (pendingVisible) scheduleRetryFrame();
   }
 
@@ -211,14 +178,14 @@ export function createTransitNetworkLayer({
 
     init(v) {
       viewer = v;
-      classificationType = surfaceForScene(v);
+      clampTo = cableClassificationTypeForScene(v);
       if (!onStackChanged && mapStackEventTarget?.addEventListener) {
         onStackChanged = (event) => {
-          classificationType = event?.detail?.activeId
-            ? surfaceForStack(event.detail.activeId)
-            : surfaceForScene(viewer);
+          clampTo = event?.detail?.activeId
+            ? cableClassificationTypeForStack(event.detail.activeId)
+            : cableClassificationTypeForScene(viewer);
           if (!scene) return;
-          scene.setSurface(classificationType);
+          scene.setSurface(clampTo);
           tilesWereLoaded = false;
           gate.markDirty();
           requestRender();
@@ -228,8 +195,8 @@ export function createTransitNetworkLayer({
           onStackChanged,
         );
       }
-      removePreRender ??= v.scene.preRender.addEventListener(sweep);
-      removeMoveEnd ??= v.camera.moveEnd.addEventListener(() => {
+      removePreRender ??= findFrame(v)?.on('preRender', sweep) ?? null;
+      removeMoveEnd ??= cameraOf(v).on('moveEnd', () => {
         if (!enabled) return;
         gate.markDirty();
         requestRender();

@@ -7,8 +7,5 @@
   "src/layers/floodVigilance/scene.js",
   "src/layers/floodVigilance/stations.js",
   "src/layers/floodVigilance/testFixtures.mjs",
-  "src/layers/newsEvents/index.js",
-  "src/layers/transitNetwork/index.js",
-  "src/layers/transitNetwork/scene.js",
-  "src/layers/transitNetwork/testFixtures.mjs"
+  "src/layers/newsEvents/index.js"
 ]
