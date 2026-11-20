@@ -1,5 +1,12 @@
-import * as Cesium from 'cesium';
+import { fromDegrees, toLonLatH } from '../../geo/ellipsoid.js';
 import { msg, t, tn } from '../../i18n/index.js';
+import { inputFor as defaultInputFor } from '../../input/dispatcher.js';
+import {
+  canvasOf,
+  findCamera,
+  findFrame,
+  findQuery,
+} from '../../render/rendererOf.js';
 import { translateFeedError } from '../../ui/statusText.js';
 import {
   cableClassificationTypeForScene,
@@ -16,7 +23,7 @@ import {
   VIGILANCE_LEVELS,
   stationIsStale,
 } from './records.js';
-import { SECTION_PICK_PREFIX, createSectionScene } from './scene.js';
+import { createSectionScene } from './scene.js';
 import {
   STATIONS_MAX_HEIGHT_M,
   STATION_LABELS_MAX_HEIGHT_M,
@@ -28,24 +35,6 @@ import {
   stationQueryKey,
 } from './stations.js';
 
-/** The shared cable surface helpers name a clamp target; the scene here wants Cesium's. */
-const CLASSIFICATION_BY_CLAMP = {
-  tiles: Cesium.ClassificationType.CESIUM_3D_TILE,
-  terrain: Cesium.ClassificationType.TERRAIN,
-  both: Cesium.ClassificationType.BOTH,
-};
-const surfaceForStack = (activeId) =>
-  CLASSIFICATION_BY_CLAMP[cableClassificationTypeForStack(activeId)];
-/** Without a bound renderer, read the globe the way the helper used to. */
-function surfaceForScene(host) {
-  const clamp = cableClassificationTypeForScene(host);
-  const shown = host?.scene?.globe?.show;
-  if (clamp === 'both' && typeof shown === 'boolean')
-    return shown
-      ? Cesium.ClassificationType.TERRAIN
-      : Cesium.ClassificationType.CESIUM_3D_TILE;
-  return CLASSIFICATION_BY_CLAMP[clamp];
-}
 export { COVERAGE, FLOOD_VIGILANCE_LAYER_ID } from './records.js';
 export { createFloodVigilanceSource } from './source.js';
 
@@ -67,7 +56,7 @@ const CAMERA_DEBOUNCE_MS = 700;
 function sectionAnchor(section) {
   const path = section.paths.reduce((a, b) => (b.length > a.length ? b : a));
   const i = Math.floor(path.length / 4) * 2;
-  return Cesium.Cartesian3.fromDegrees(path[i], path[i + 1]);
+  return fromDegrees(path[i], path[i + 1]);
 }
 
 /**
@@ -76,34 +65,29 @@ function sectionAnchor(section) {
  */
 function viewBox(viewer) {
   const cap = stationQueryBox(viewCentre(viewer));
-  const rectangle = viewer.camera.computeViewRectangle?.();
+  const rectangle = findCamera(viewer)?.viewRectangle?.();
   if (!rectangle) return cap;
-  const deg = Cesium.Math.toDegrees;
   const box = {
-    west: Math.max(cap.west, deg(rectangle.west)),
-    south: Math.max(cap.south, deg(rectangle.south)),
-    east: Math.min(cap.east, deg(rectangle.east)),
-    north: Math.min(cap.north, deg(rectangle.north)),
+    west: Math.max(cap.west, rectangle.west),
+    south: Math.max(cap.south, rectangle.south),
+    east: Math.min(cap.east, rectangle.east),
+    north: Math.min(cap.north, rectangle.north),
   };
   return box.west < box.east && box.south < box.north ? box : cap;
 }
 
 /** Degrees under the screen centre, else under the camera. */
 function viewCentre(viewer) {
-  const canvas = viewer.scene.canvas;
+  const canvas = canvasOf(viewer);
   const centre =
     canvas?.clientWidth > 0 &&
     canvas.clientHeight > 0 &&
-    viewer.camera.pickEllipsoid(
-      new Cesium.Cartesian2(canvas.clientWidth / 2, canvas.clientHeight / 2),
+    findQuery(viewer)?.pickEllipsoid(
+      canvas.clientWidth / 2,
+      canvas.clientHeight / 2,
     );
-  const carto = centre
-    ? Cesium.Cartographic.fromCartesian(centre)
-    : viewer.camera.positionCartographic;
-  return {
-    lon: Cesium.Math.toDegrees(carto.longitude),
-    lat: Cesium.Math.toDegrees(carto.latitude),
-  };
+  const at = centre ? toLonLatH(centre) : findCamera(viewer)?.pose();
+  return { lon: at?.lon ?? 0, lat: at?.lat ?? 0 };
 }
 
 /**
@@ -113,9 +97,10 @@ function viewCentre(viewer) {
  * @param {object} deps
  * @param {{label: string, getSections: Function, getStations: Function}} deps.source
  * @param {{setEntries: Function, setVisible: Function, clearSource: Function}} deps.overlayHost
- * @param {Function|null} [deps.screenSpaceEventHandlerFactory]
- * @param {{resolvePickId: Function, isOwnedByOtherLayer: Function, registerPickOwner?: Function, unregisterPickOwner?: Function}|null} [deps.picking]
- * @param {{isPointerFree(): boolean}|null} [deps.pointer]
+ * @param {((viewer: object) => import('../../input/dispatcher.js').InputDispatcher)|null} [deps.inputFor]
+ *   Clicks come through the viewer's input dispatcher, which hears ambient
+ *   clicks only while no tool holds the pointer.
+ * @param {{resolvePickId: Function, isOwnedByOtherLayer: Function, registerPickOwner?: Function, unregisterPickOwner?: Function, clickCard?: Function}|null} [deps.picking]
  * @param {EventTarget|null} [deps.mapStackEventTarget] window in the app.
  * @param {() => number} [deps.now]
  * @returns {object} Catalog layer.
@@ -123,9 +108,8 @@ function viewCentre(viewer) {
 export function createFloodVigilanceLayer({
   source,
   overlayHost,
-  screenSpaceEventHandlerFactory = null,
+  inputFor = defaultInputFor,
   picking = null,
-  pointer = null,
   mapStackEventTarget = null,
   now = () => Date.now(),
 }) {
@@ -142,7 +126,8 @@ export function createFloodVigilanceLayer({
 
   let viewer = null;
   let enabled = false;
-  let classificationType = Cesium.ClassificationType.BOTH;
+  /** What the section lines drape on: `'tiles'`, `'terrain'` or `'both'`. */
+  let clampTo = 'both';
   /** @type {{sections: import('./records.js').FloodSection[], publishedAt: number|null, stale: boolean}|null} */
   let bulletin = null;
   let signature = null;
@@ -160,24 +145,22 @@ export function createFloodVigilanceLayer({
   let stationsShown = false;
   let cameraTimer = null;
   let removeMoveEnd = null;
-  let clickHandler = null;
+  let clickSubscription = null;
   let onStackChanged = null;
-  /** @type {{kind: 'section'|'station', id: string, position: Cesium.Cartesian3}|null} */
+  /** @type {{kind: 'section'|'station', id: string, position: {x: number, y: number, z: number}}|null} */
   let selected = null;
   const sectionsById = new Map();
   const stationsById = new Map();
   let rowControlsListener = null;
   const notify = () => rowControlsListener?.();
 
-  const requestRender = () => viewer?.scene?.requestRender?.();
-  const cameraHeight = () =>
-    viewer?.camera?.positionCartographic?.height ?? Infinity;
+  const requestRender = () =>
+    findFrame(viewer)?.requestRender(FLOOD_VIGILANCE_LAYER_ID);
+  const cameraHeight = () => findCamera(viewer)?.pose()?.height ?? Infinity;
 
   function mountSections() {
     if (sectionScene || !enabled || !viewer || !bulletin) return;
-    sectionScene = createSectionScene(viewer, bulletin.sections, {
-      classificationType,
-    });
+    sectionScene = createSectionScene(viewer, bulletin.sections, { clampTo });
     requestRender();
   }
 
@@ -320,44 +303,52 @@ export function createFloodVigilanceLayer({
     overlayHost.clearSource(FLOOD_CARD_SOURCE_ID);
   }
 
-  /** This layer's pick as {kind, id}, or null. */
-  function pickedItem(picked) {
-    const id = picking.resolvePickId(picked);
-    if (typeof id !== 'string') return null;
-    if (id.startsWith(STATION_PICK_PREFIX) && stationsShown) {
-      const stationId = id.slice(STATION_PICK_PREFIX.length);
-      return stationsById.has(stationId)
-        ? { kind: 'station', id: stationId }
-        : null;
-    }
-    if (id.startsWith(SECTION_PICK_PREFIX)) {
-      const sectionId = id.slice(SECTION_PICK_PREFIX.length);
-      return sectionsById.has(sectionId)
-        ? { kind: 'section', id: sectionId }
-        : null;
-    }
+  /**
+   * This layer's item under a click (its draw hit, query.d.ts `Hit`) as
+   * {kind, id}, or null: a station dot while the dots show, or a section.
+   */
+  function pickedItem(hit) {
+    if (!hit || hit.surface) return null;
+    const { kind, id } = hit.meta ?? {};
+    if (
+      kind === 'station' &&
+      stationsShown &&
+      stationScene?.setId === hit.set &&
+      stationsById.has(id)
+    )
+      return { kind, id };
+    if (
+      kind === 'section' &&
+      sectionScene?.setIds.has(hit.set) &&
+      sectionsById.has(id)
+    )
+      return { kind, id };
     return null;
   }
 
-  function onClick(click) {
-    if (!enabled || (pointer && !pointer.isPointerFree())) return;
-    const picked = viewer.scene.pick(click.position);
-    const item = picked ? pickedItem(picked) : null;
+  function onClick(event) {
+    if (!enabled) return;
+    // A card or label painted on top takes the click: what lies under it is
+    // background, and the selection stays as it is.
+    if (event.overlay || picking.clickCard?.(event)) return;
+    const item = pickedItem(event.drawHit);
     if (item) {
       const station =
         item.kind === 'station' &&
         stationScene.records.find((record) => record.station.id === item.id);
+      const { x, y } = event.position;
       selected = {
         ...item,
         position: station
           ? station.position
-          : (viewer.camera.pickEllipsoid(click.position) ??
+          : (findQuery(viewer)?.pickEllipsoid(x, y) ??
             sectionAnchor(sectionsById.get(item.id))),
       };
       publishCard();
       return;
     }
     // Another layer's object is not empty space: leave the selection alone.
+    const picked = event.topHit;
     const pickId = picked ? picking.resolvePickId(picked) : null;
     if (pickId && picking.isOwnedByOtherLayer(FLOOD_VIGILANCE_LAYER_ID, pickId))
       return;
@@ -368,24 +359,20 @@ export function createFloodVigilanceLayer({
   }
 
   function installClickHandler() {
-    if (clickHandler || !viewer || !screenSpaceEventHandlerFactory || !picking)
-      return;
+    if (clickSubscription || !viewer || !inputFor || !picking) return;
     // Only the station dots claim their picks. Like fire perimeters, long
     // ground lines would otherwise make sibling clicks inert where they cross.
     picking.registerPickOwner?.(FLOOD_VIGILANCE_LAYER_ID, (id) =>
       id.startsWith(STATION_PICK_PREFIX),
     );
-    clickHandler = screenSpaceEventHandlerFactory(viewer);
-    clickHandler.setInputAction(
-      onClick,
-      Cesium.ScreenSpaceEventType.LEFT_CLICK,
-    );
+    clickSubscription = inputFor(viewer).onClick(onClick);
   }
 
   function removeClickHandler() {
-    if (clickHandler) picking?.unregisterPickOwner?.(FLOOD_VIGILANCE_LAYER_ID);
-    clickHandler?.destroy();
-    clickHandler = null;
+    if (clickSubscription)
+      picking?.unregisterPickOwner?.(FLOOD_VIGILANCE_LAYER_ID);
+    clickSubscription?.();
+    clickSubscription = null;
   }
 
   function applyBulletin(next) {
@@ -457,16 +444,16 @@ export function createFloodVigilanceLayer({
 
     init(v) {
       viewer = v;
-      classificationType = surfaceForScene(v);
+      clampTo = cableClassificationTypeForScene(v);
       overlayHost.setVisible(FLOOD_CARD_SOURCE_ID, false);
       overlayHost.setVisible(STATION_LABEL_SOURCE_ID, false);
-      removeMoveEnd ??= v?.camera?.moveEnd?.addEventListener(scheduleStations);
+      removeMoveEnd ??= findCamera(v)?.on('moveEnd', scheduleStations);
       if (!onStackChanged && mapStackEventTarget?.addEventListener) {
         onStackChanged = (event) => {
-          classificationType = event?.detail?.activeId
-            ? surfaceForStack(event.detail.activeId)
-            : surfaceForScene(viewer);
-          sectionScene?.setSurface(classificationType);
+          clampTo = event?.detail?.activeId
+            ? cableClassificationTypeForStack(event.detail.activeId)
+            : cableClassificationTypeForScene(viewer);
+          sectionScene?.setSurface(clampTo);
           requestRender();
         };
         mapStackEventTarget.addEventListener(

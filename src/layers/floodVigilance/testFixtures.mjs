@@ -1,40 +1,56 @@
-import * as Cesium from 'cesium';
+import { bindRenderer } from '../../render/rendererOf.js';
+import { createStubRenderer } from '../../render/stub/index.js';
 
-// Node has no WebGL context; GroundPolylinePrimitive validates its 1 px
-// render-state line width against these limits at construction.
-Cesium.ContextLimits._minimumAliasedLineWidth = 1;
-Cesium.ContextLimits._maximumAliasedLineWidth = 1;
-
-/** Minimal viewer: primitives, a scripted pick and a movable camera height. */
+/**
+ * A scene object on the stub renderer, the eye straight down over
+ * `lon, lat` at `heightM`. Clicks pick the hit in `picked` (a hit of
+ * `hitOf`, or another layer's), and the camera reports `viewRectangle`
+ * (`[west, south, east, north]`, degrees) or, without one, no rectangle.
+ */
 export function fakeViewer({
   heightM = 900_000,
   lon = 2.35,
   lat = 46.5,
   viewRectangle = null,
 } = {}) {
-  const renders = { count: 0 };
+  const renderer = createStubRenderer();
   const viewer = {
     picked: null,
-    renders,
-    scene: {
-      groundPrimitives: new Cesium.PrimitiveCollection(),
-      primitives: new Cesium.PrimitiveCollection(),
-      globe: { show: true, ellipsoid: Cesium.Ellipsoid.WGS84 },
-      canvas: { clientWidth: 1200, clientHeight: 800 },
-      pick: () => viewer.picked,
-      requestRender() {
-        renders.count++;
-      },
+    renderer,
+    /** Move the eye to `height`, over the same point. */
+    setHeight(height) {
+      renderer.camera.setView({ destination: { lon, lat, height } });
     },
-    camera: {
-      positionCartographic: Cesium.Cartographic.fromDegrees(lon, lat, heightM),
-      moveEnd: new Cesium.Event(),
-      pickEllipsoid: () => Cesium.Cartesian3.fromDegrees(lon, lat),
-      computeViewRectangle: () =>
-        viewRectangle && Cesium.Rectangle.fromDegrees(...viewRectangle),
+    /** A click at `(x, y)`, as the input port raises it. */
+    click(x = 10, y = 10) {
+      renderer.testing.pointer('click', x, y);
     },
   };
+  bindRenderer(viewer, renderer);
+  viewer.setHeight(heightM);
+  const [west, south, east, north] = viewRectangle ?? [];
+  renderer.camera.viewRectangle = () =>
+    viewRectangle ? { west, south, east, north } : null;
+  renderer.testing.scriptPicks(() => (viewer.picked ? [viewer.picked] : []));
   return viewer;
+}
+
+/** The live draw sets whose id starts with `prefix`, in the order made. */
+export function setsOf(viewer, prefix) {
+  const testing = viewer.renderer.testing;
+  return testing
+    .sets()
+    .filter((id) => id.startsWith(prefix))
+    .map((id) => ({ id, ...testing.setRecord(id) }));
+}
+
+/** The hit of the drawn item `id`, as a pick of it answers. */
+export function hitOf(viewer, id) {
+  for (const set of setsOf(viewer, '')) {
+    const item = set.items.get(id);
+    if (item) return { set: set.id, id, meta: item.meta, surface: false };
+  }
+  throw new Error(`No drawn item ${id}`);
 }
 
 /** Records overlay-host calls as [verb, sourceId, titles|visible]. */
@@ -55,24 +71,6 @@ export function recordingHost() {
       calls.push(['clear', id]);
     },
   };
-}
-
-/** A ScreenSpaceEventHandler stand-in that exposes the registered click. */
-export function clickSeam() {
-  const seam = { handlers: 0, destroyed: 0, click: null };
-  seam.factory = () => {
-    seam.handlers++;
-    return {
-      setInputAction(action) {
-        seam.click = action;
-      },
-      destroy() {
-        seam.destroyed++;
-        seam.click = null;
-      },
-    };
-  };
-  return seam;
 }
 
 export function fakePicking() {
